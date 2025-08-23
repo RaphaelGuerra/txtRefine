@@ -51,36 +51,9 @@ Transcrição a refinar (parte {chunk_num} de {total_chunks}):
 
 Refine esta transcrição mantendo a fidelidade ABSOLUTA ao original, corrigindo APENAS erros de transcrição:"""
 
-GENERAL_REFINEMENT_PROMPT = """Você é um especialista em revisão de textos em português brasileiro.
 
-Sua tarefa é refinar a seguinte transcrição mantendo fidelidade absoluta ao conteúdo original, mas corrigindo APENAS:
 
-1. Erros gramaticais óbvios do português
-2. Palavras mal transcritas ou incompletas
-3. Frases quebradas ou mal estruturadas
-
-REGRAS ESTRITAS:
-- NÃO resuma, condense ou omita conteúdo
-- NÃO adicione novas informações
-- NÃO mude o significado das frases
-- Mantenha o mesmo comprimento e estrutura
-- Corrija APENAS erros óbvios de transcrição
-
-Transcrição a refinar (parte {chunk_num} de {total_chunks}):
-
-{chunk}
-
-Refine esta transcrição mantendo a fidelidade absoluta ao original:"""
-
-# Content type detection keywords
-PHILOSOPHY_KEYWORDS = [
-    'filosofia', 'escolástica', 'tomás', 'aquino', 'aristóteles', 'platão',
-    'metafísica', 'ontologia', 'epistemologia', 'ética', 'lógica',
-    'silogismo', 'substância', 'essência', 'existência', 'ser', 'ente',
-    'causa', 'efeito', 'potência', 'ato', 'forma', 'matéria',
-    'universal', 'particular', 'gênero', 'espécie', 'diferença',
-    'olavo', 'carvalho', 'seminário', 'aula', 'curso'
-]
+# All texts are philosophical - no need for detection
 
 # Core refinement functions
 
@@ -105,70 +78,34 @@ def clean_text(text):
     return text.strip()
 
 def split_into_chunks(text, max_words=MAX_WORDS_PER_CHUNK):
-    """Split text into chunks while preserving sentence boundaries."""
+    """Split text into chunks - simple and fast."""
     words = text.split()
     
     if len(words) <= max_words:
         return [text]
     
     chunks = []
-    current_chunk = []
-    
-    for word in words:
-        current_chunk.append(word)
-        
-        # Check if we should end the chunk
-        if len(current_chunk) >= max_words:
-            # Try to find a sentence boundary
-            chunk_text = ' '.join(current_chunk)
-            
-            # Look for sentence endings
-            sentences = re.split(r'[.!?]\s+', chunk_text)
-            
-            if len(sentences) > 1:
-                # Keep all but the last incomplete sentence
-                complete_sentences = sentences[:-1]
-                chunk_to_add = '. '.join(complete_sentences) + '.'
-                chunks.append(chunk_to_add)
-                
-                # Start new chunk with the remaining text
-                remaining = sentences[-1]
-                current_chunk = remaining.split() if remaining.strip() else []
-            else:
-                # No sentence boundary found, split at word boundary
-                chunks.append(' '.join(current_chunk))
-                current_chunk = []
-    
-    # Add remaining words as final chunk
-    if current_chunk:
-        chunks.append(' '.join(current_chunk))
+    for i in range(0, len(words), max_words):
+        chunk_words = words[i:i + max_words]
+        chunks.append(' '.join(chunk_words))
     
     return chunks
 
 def detect_content_type(text):
-    """Detect if the content is philosophy-related."""
-    text_lower = text.lower()
-    philosophy_count = sum(1 for keyword in PHILOSOPHY_KEYWORDS if keyword in text_lower)
-    return "philosophy" if philosophy_count >= 2 else "general"
+    """All texts are philosophical for this program."""
+    return "philosophy"
 
-def create_refinement_prompt(chunk, chunk_num, total_chunks, content_type="philosophy"):
-    """Create refinement prompt based on content type."""
-    if content_type == "philosophy":
-        return PHILOSOPHY_REFINEMENT_PROMPT.format(
-            chunk=chunk,
-            chunk_num=chunk_num,
-            total_chunks=total_chunks
-        )
-    else:
-        return GENERAL_REFINEMENT_PROMPT.format(
-            chunk=chunk,
-            chunk_num=chunk_num,
-            total_chunks=total_chunks
-        )
+def create_refinement_prompt(chunk, chunk_num, total_chunks):
+    """Create refinement prompt for philosophical content."""
+    return PHILOSOPHY_REFINEMENT_PROMPT.format(
+        chunk=chunk,
+        chunk_num=chunk_num,
+        total_chunks=total_chunks
+    )
 
-def refine_chunk(chunk, model_name, chunk_num, total_chunks, content_type="philosophy", max_retries=MAX_RETRIES):
+def refine_chunk(chunk, model_name, chunk_num, total_chunks, max_retries=MAX_RETRIES):
     """Refine a single chunk of text using the specified model."""
-    prompt = create_refinement_prompt(chunk, chunk_num, total_chunks, content_type)
+    prompt = create_refinement_prompt(chunk, chunk_num, total_chunks)
     
     for attempt in range(max_retries):
         try:
@@ -210,8 +147,8 @@ def refine_chunk(chunk, model_name, chunk_num, total_chunks, content_type="philo
                     first_half = chunk[:mid_point]
                     second_half = chunk[mid_point:]
                 
-                refined_first = refine_chunk(first_half, model_name, chunk_num, total_chunks, content_type, max_retries)
-                refined_second = refine_chunk(second_half, model_name, chunk_num, total_chunks, content_type, max_retries)
+                refined_first = refine_chunk(first_half, model_name, chunk_num, total_chunks, max_retries)
+                refined_second = refine_chunk(second_half, model_name, chunk_num, total_chunks, max_retries)
                 
                 return refined_first + " " + refined_second
             else:
@@ -237,9 +174,8 @@ def refine_transcription(input_path, output_path, model_name):
             print("❌ Arquivo vazio")
             return False
         
-        # Detect content type
-        content_type = detect_content_type(original_text)
-        print(f"📚 Tipo de conteúdo detectado: {content_type}")
+        # All texts are philosophical
+        print("📚 Processando como texto filosófico")
         
         # Clean and prepare text
         cleaned_text = clean_text(original_text)
@@ -252,7 +188,7 @@ def refine_transcription(input_path, output_path, model_name):
         refined_chunks = []
         with tqdm(total=len(chunks), desc="Refinando chunks", unit="chunk") as pbar:
             for i, chunk in enumerate(chunks, 1):
-                refined_chunk = refine_chunk(chunk, model_name, i, len(chunks), content_type)
+                refined_chunk = refine_chunk(chunk, model_name, i, len(chunks))
                 refined_chunks.append(refined_chunk)
                 pbar.update(1)
         
