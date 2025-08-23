@@ -20,24 +20,31 @@ def create_batch_config():
         "created": datetime.now().isoformat(),
         "batches": [
             {
-                "name": "Filosofia - Alta Qualidade",
-                "description": "Processa arquivos filosóficos com modelo de alta qualidade",
-                "files": ["aula_filosofia.txt", "seminario_escolastica.txt"],
-                "model": "mistral:7b",
+                "name": "Filosofia - Máxima Qualidade",
+                "description": "Processa arquivos filosóficos com modelo de máxima qualidade",
+                "files": ["test_sample.txt"],
+                "model": "neural-chat:latest",
                 "enabled": True
             },
             {
-                "name": "Filosofia - Rápido",
-                "description": "Processa arquivos filosóficos com modelo rápido",
-                "files": ["aula_breve.txt"],
+                "name": "Filosofia - Excelente Qualidade",
+                "description": "Processa arquivos filosóficos com modelo de excelente qualidade",
+                "files": ["test_sample.txt"],
+                "model": "openchat:latest",
+                "enabled": True
+            },
+            {
+                "name": "Filosofia - Equilibrado",
+                "description": "Processa arquivos filosóficos com modelo equilibrado",
+                "files": ["test_sample.txt"],
+                "model": "llama3.2:latest",
+                "enabled": True
+            },
+            {
+                "name": "Processamento Rápido",
+                "description": "Processa arquivos com modelo rápido para tarefas básicas",
+                "files": ["test_sample.txt"],
                 "model": "gemma:2b",
-                "enabled": True
-            },
-            {
-                "name": "Conteúdo Geral",
-                "description": "Processa arquivos de conteúdo geral",
-                "files": ["palestra_geral.txt"],
-                "model": "llama2:7b",
                 "enabled": False
             }
         ],
@@ -55,6 +62,11 @@ def create_batch_config():
     
     print("✅ Arquivo de configuração 'batch_config.json' criado!")
     print("📝 Edite o arquivo conforme suas necessidades e execute novamente.")
+    print("\n💡 Dicas de configuração:")
+    print("   - Coloque seus arquivos .txt na pasta 'input/'")
+    print("   - Ajuste os nomes dos arquivos na configuração")
+    print("   - Escolha o modelo que deseja usar")
+    print("   - Habilite/desabilite lotes conforme necessário")
 
 def load_batch_config(config_file="batch_config.json"):
     """Load batch configuration from file."""
@@ -94,7 +106,7 @@ def process_batch(batch, input_folder, output_folder, backup_folder=None, create
     
     if not batch['enabled']:
         print("⏸️  Lote desabilitado, pulando...")
-        return True
+        return []  # Return empty list instead of True
     
     results = []
     
@@ -125,7 +137,9 @@ def process_batch(batch, input_folder, output_folder, backup_folder=None, create
             output_path = output_folder / output_filename
             
             # Import and run refinement
-            from src.refine import refine_transcription
+            import sys
+            sys.path.insert(0, str(Path(__file__).parent / "src"))
+            from refine import refine_transcription
             success = refine_transcription(input_path, output_path, batch['model'])
             
             if success:
@@ -151,7 +165,7 @@ def process_batch(batch, input_folder, output_folder, backup_folder=None, create
                 "error": str(e)
             })
     
-    return results
+    return results  # Return the results list
 
 def main():
     """Main function for batch processing."""

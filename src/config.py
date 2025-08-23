@@ -3,7 +3,7 @@ Configuration file for the Text Refinement Program
 """
 
 # Default Ollama model to use
-DEFAULT_MODEL = "openchat:latest"
+DEFAULT_MODEL = "llama3.2:latest"
 
 # Chunk processing settings
 MAX_WORDS_PER_CHUNK = 800
