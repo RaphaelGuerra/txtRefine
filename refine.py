@@ -1,18 +1,287 @@
 #!/usr/bin/env python3
 """
-Interactive Text Refinement Program for txtRefine
+txtRefine - Interactive Text Refinement Program
 
-This program provides an interactive menu system where you can choose
-models, files, and options without using command-line arguments.
+This program refines transcriptions of philosophy classes in Brazilian Portuguese.
+It provides an interactive menu system for choosing models, files, and options.
 """
 
+import ollama
 import os
 import sys
+import re
 from pathlib import Path
 import time
+from tqdm import tqdm
 
-# Add src directory to Python path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# Configuration
+DEFAULT_MODEL = "llama3.2:latest"
+MAX_WORDS_PER_CHUNK = 800
+MIN_WORDS_PER_CHUNK = 400
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 2
+CONTENT_LOSS_THRESHOLD = 0.7
+DEFAULT_ENCODING = "utf-8"
+OUTPUT_PREFIX = "refined_"
+
+# Prompt template
+PHILOSOPHY_REFINEMENT_PROMPT = """Você é um especialista em filosofia medieval e escolástica, com profundo conhecimento da língua portuguesa e da obra de Olavo de Carvalho.
+
+Sua tarefa é refinar a seguinte transcrição de uma aula de filosofia, mantendo a fidelidade ABSOLUTA ao conteúdo original e ao estilo do professor, mas corrigindo APENAS:
+
+1. Erros gramaticais óbvios do português
+2. Palavras mal transcritas ou incompletas (ex: "Colássica" → "Escolástica")
+3. Frases quebradas ou mal estruturadas
+4. Termos filosóficos incorretos
+
+REGRAS ESTRITAS:
+- NÃO resuma, condense ou omita conteúdo
+- NÃO adicione novas informações ou explicações
+- NÃO mude o significado ou a estrutura das frases
+- NÃO altere exemplos, citações ou referências
+- Mantenha EXATAMENTE o mesmo comprimento e estrutura
+- Preserve TODAS as ideias filosóficas originais
+- Mantenha o estilo coloquial e didático do professor
+- Corrija APENAS erros óbvios de transcrição
+- Mantenha a estrutura e fluxo da argumentação original
+
+Transcrição a refinar (parte {chunk_num} de {total_chunks}):
+
+{chunk}
+
+Refine esta transcrição mantendo a fidelidade ABSOLUTA ao original, corrigindo APENAS erros de transcrição:"""
+
+GENERAL_REFINEMENT_PROMPT = """Você é um especialista em revisão de textos em português brasileiro.
+
+Sua tarefa é refinar a seguinte transcrição mantendo fidelidade absoluta ao conteúdo original, mas corrigindo APENAS:
+
+1. Erros gramaticais óbvios do português
+2. Palavras mal transcritas ou incompletas
+3. Frases quebradas ou mal estruturadas
+
+REGRAS ESTRITAS:
+- NÃO resuma, condense ou omita conteúdo
+- NÃO adicione novas informações
+- NÃO mude o significado das frases
+- Mantenha o mesmo comprimento e estrutura
+- Corrija APENAS erros óbvios de transcrição
+
+Transcrição a refinar (parte {chunk_num} de {total_chunks}):
+
+{chunk}
+
+Refine esta transcrição mantendo a fidelidade absoluta ao original:"""
+
+# Content type detection keywords
+PHILOSOPHY_KEYWORDS = [
+    'filosofia', 'escolástica', 'tomás', 'aquino', 'aristóteles', 'platão',
+    'metafísica', 'ontologia', 'epistemologia', 'ética', 'lógica',
+    'silogismo', 'substância', 'essência', 'existência', 'ser', 'ente',
+    'causa', 'efeito', 'potência', 'ato', 'forma', 'matéria',
+    'universal', 'particular', 'gênero', 'espécie', 'diferença',
+    'olavo', 'carvalho', 'seminário', 'aula', 'curso'
+]
+
+# Core refinement functions
+
+def check_ollama_installation():
+    """Check if Ollama is installed and accessible."""
+    try:
+        response = ollama.list()
+        return True
+    except Exception as e:
+        print(f"❌ Erro ao conectar com Ollama: {e}")
+        print("💡 Certifique-se de que o Ollama está instalado e rodando")
+        return False
+
+def clean_text(text):
+    """Clean and preprocess text before chunking."""
+    # Remove excessive whitespace
+    text = re.sub(r'\s+', ' ', text)
+    # Fix broken words at line breaks
+    text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
+    # Remove extra newlines but preserve paragraph breaks
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
+    return text.strip()
+
+def split_into_chunks(text, max_words=MAX_WORDS_PER_CHUNK):
+    """Split text into chunks while preserving sentence boundaries."""
+    words = text.split()
+    
+    if len(words) <= max_words:
+        return [text]
+    
+    chunks = []
+    current_chunk = []
+    
+    for word in words:
+        current_chunk.append(word)
+        
+        # Check if we should end the chunk
+        if len(current_chunk) >= max_words:
+            # Try to find a sentence boundary
+            chunk_text = ' '.join(current_chunk)
+            
+            # Look for sentence endings
+            sentences = re.split(r'[.!?]\s+', chunk_text)
+            
+            if len(sentences) > 1:
+                # Keep all but the last incomplete sentence
+                complete_sentences = sentences[:-1]
+                chunk_to_add = '. '.join(complete_sentences) + '.'
+                chunks.append(chunk_to_add)
+                
+                # Start new chunk with the remaining text
+                remaining = sentences[-1]
+                current_chunk = remaining.split() if remaining.strip() else []
+            else:
+                # No sentence boundary found, split at word boundary
+                chunks.append(' '.join(current_chunk))
+                current_chunk = []
+    
+    # Add remaining words as final chunk
+    if current_chunk:
+        chunks.append(' '.join(current_chunk))
+    
+    return chunks
+
+def detect_content_type(text):
+    """Detect if the content is philosophy-related."""
+    text_lower = text.lower()
+    philosophy_count = sum(1 for keyword in PHILOSOPHY_KEYWORDS if keyword in text_lower)
+    return "philosophy" if philosophy_count >= 2 else "general"
+
+def create_refinement_prompt(chunk, chunk_num, total_chunks, content_type="philosophy"):
+    """Create refinement prompt based on content type."""
+    if content_type == "philosophy":
+        return PHILOSOPHY_REFINEMENT_PROMPT.format(
+            chunk=chunk,
+            chunk_num=chunk_num,
+            total_chunks=total_chunks
+        )
+    else:
+        return GENERAL_REFINEMENT_PROMPT.format(
+            chunk=chunk,
+            chunk_num=chunk_num,
+            total_chunks=total_chunks
+        )
+
+def refine_chunk(chunk, model_name, chunk_num, total_chunks, content_type="philosophy", max_retries=MAX_RETRIES):
+    """Refine a single chunk of text using the specified model."""
+    prompt = create_refinement_prompt(chunk, chunk_num, total_chunks, content_type)
+    
+    for attempt in range(max_retries):
+        try:
+            response = ollama.generate(
+                model=model_name,
+                prompt=prompt,
+                stream=False
+            )
+            
+            refined_text = response['response'].strip()
+            
+            # Check for significant content loss
+            original_length = len(chunk)
+            refined_length = len(refined_text)
+            
+            if refined_length < original_length * CONTENT_LOSS_THRESHOLD:
+                print(f"⚠️  Possível perda de conteúdo detectada (tentativa {attempt + 1})")
+                if attempt < max_retries - 1:
+                    time.sleep(RETRY_DELAY_SECONDS)
+                    continue
+                else:
+                    print("❌ Usando texto original devido à perda de conteúdo")
+                    return chunk
+            
+            return refined_text
+            
+        except Exception as e:
+            if "context length" in str(e).lower():
+                print(f"⚠️  Chunk muito longo, dividindo...")
+                # Split chunk in half and process recursively
+                mid_point = len(chunk) // 2
+                # Find a good split point (sentence boundary)
+                sentences = chunk.split('. ')
+                if len(sentences) > 1:
+                    mid_sentence = len(sentences) // 2
+                    first_half = '. '.join(sentences[:mid_sentence]) + '.'
+                    second_half = '. '.join(sentences[mid_sentence:])
+                else:
+                    first_half = chunk[:mid_point]
+                    second_half = chunk[mid_point:]
+                
+                refined_first = refine_chunk(first_half, model_name, chunk_num, total_chunks, content_type, max_retries)
+                refined_second = refine_chunk(second_half, model_name, chunk_num, total_chunks, content_type, max_retries)
+                
+                return refined_first + " " + refined_second
+            else:
+                print(f"❌ Erro ao refinar chunk {chunk_num}: {e}")
+                if attempt < max_retries - 1:
+                    print(f"🔄 Tentando novamente em {RETRY_DELAY_SECONDS} segundos...")
+                    time.sleep(RETRY_DELAY_SECONDS)
+                else:
+                    print("❌ Usando texto original após múltiplas tentativas")
+                    return chunk
+    
+    return chunk
+
+def refine_transcription(input_path, output_path, model_name):
+    """Main function to refine a transcription file."""
+    try:
+        # Read input file
+        print(f"📖 Processando: {input_path.name}")
+        with open(input_path, 'r', encoding=DEFAULT_ENCODING) as f:
+            original_text = f.read()
+        
+        if not original_text.strip():
+            print("❌ Arquivo vazio")
+            return False
+        
+        # Detect content type
+        content_type = detect_content_type(original_text)
+        print(f"📚 Tipo de conteúdo detectado: {content_type}")
+        
+        # Clean and prepare text
+        cleaned_text = clean_text(original_text)
+        
+        # Split into chunks
+        chunks = split_into_chunks(cleaned_text)
+        print(f"📝 Dividido em {len(chunks)} chunks para processamento")
+        
+        # Process chunks with progress bar
+        refined_chunks = []
+        with tqdm(total=len(chunks), desc="Refinando chunks", unit="chunk") as pbar:
+            for i, chunk in enumerate(chunks, 1):
+                refined_chunk = refine_chunk(chunk, model_name, i, len(chunks), content_type)
+                refined_chunks.append(refined_chunk)
+                pbar.update(1)
+        
+        # Combine refined chunks
+        refined_text = ' '.join(refined_chunks)
+        
+        # Save output
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, 'w', encoding=DEFAULT_ENCODING) as f:
+            f.write(refined_text)
+        
+        # Statistics
+        original_words = len(original_text.split())
+        refined_words = len(refined_text.split())
+        
+        print(f"\n✅ Refinamento concluído!")
+        print(f"📊 Estatísticas:")
+        print(f"   Palavras originais: {original_words:,}")
+        print(f"   Palavras refinadas: {refined_words:,}")
+        print(f"   Diferença: {refined_words - original_words:+,}")
+        print(f"📁 Salvo em: {output_path}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erro ao processar arquivo: {e}")
+        return False
+
+# Interactive menu functions
 
 def show_header():
     """Display the program header."""
@@ -242,7 +511,6 @@ def process_files(files, model_name):
         output_path = Path("output") / output_filename
         
         try:
-            from refine import refine_transcription
             success = refine_transcription(input_path, output_path, model_name)
             
             if success:
@@ -310,10 +578,10 @@ def main():
         show_header()
         
         # Check if Ollama is available
-        try:
-            import ollama
-        except ImportError:
-            print("❌ Ollama não encontrado. Instale com: pip install ollama")
+        if not check_ollama_installation():
+            print("❌ Ollama não está disponível")
+            print("💡 Instale com: pip install ollama")
+            print("💡 E certifique-se de que o serviço Ollama está rodando")
             return
         
         # Get available models

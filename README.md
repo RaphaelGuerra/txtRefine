@@ -44,9 +44,7 @@ Siga os menus interativos para escolher modelo, arquivos e opções.
 txtRefine/
 ├── input/                    # Arquivos de transcrição originais
 ├── output/                   # Arquivos refinados (prefixo "refined_")
-├── src/
-│   └── refine.py            # Módulo de refinamento
-├── refine.py                 # Programa principal interativo
+├── refine.py                 # Programa principal (tudo-em-um)
 ├── requirements.txt          # Dependências Python
 └── README.md                # Este arquivo
 ```
