@@ -1,7 +1,13 @@
-# Input and output files - never track these
-input/
-output/
-backups/
+# txtRefine specific - never track user data
+input/                        # User's original transcription files
+output/                       # Generated refined files
+backups/                      # Backup files created during processing
+
+# txtRefine temporary files
+*.refined
+*_backup_*
+refined_*
+test_sample*.txt
 
 # Python
 __pycache__/
