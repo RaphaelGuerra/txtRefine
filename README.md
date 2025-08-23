@@ -1,6 +1,6 @@
-# Text Refinement Program for Portuguese Philosophy Classes
+# txtRefine - Refinamento Inteligente de Transcrições
 
-Este programa refina transcrições de aulas de filosofia em Português Brasileiro usando um modelo Ollama local. Foi especificamente desenvolvido para transcrições de aulas de filosofia, como as de Olavo de Carvalho, mantendo a fidelidade absoluta ao conteúdo original enquanto corrige erros de transcrição e melhora a clareza.
+Programa interativo para refinar transcrições de aulas de filosofia e conteúdo acadêmico em Português Brasileiro. Mantém fidelidade absoluta ao original enquanto corrige erros de transcrição.
 
 ## ✨ Características
 
@@ -11,7 +11,7 @@ Este programa refina transcrições de aulas de filosofia em Português Brasilei
 - **Interface Amigável**: Barra de progresso e estatísticas detalhadas
 - **Fallback Seguro**: Em caso de erro, mantém o texto original
 
-## 🚀 Como Executar
+## 🚀 Como Usar
 
 ### 1. Instalar Ollama
 Baixe e instale o Ollama de [https://ollama.com/download](https://ollama.com/download)
@@ -19,18 +19,10 @@ Baixe e instale o Ollama de [https://ollama.com/download](https://ollama.com/dow
 ### 2. Baixar o Modelo
 Execute no terminal para o modelo padrão:
 ```bash
-ollama pull gemma:2b
-```
-
-Para outros modelos (recomendado para filosofia):
-```bash
-ollama pull llama2:7b
-ollama pull gemma:7b
-ollama pull mistral:7b
+ollama pull llama3.2:latest
 ```
 
 ### 3. Instalar Dependências Python
-Navegue até a pasta raiz do projeto e execute:
 ```bash
 pip3 install -r requirements.txt
 ```
@@ -40,18 +32,11 @@ Coloque seus arquivos `.txt` de transcrição na pasta `input/`
 
 ### 5. Executar o Refinamento
 ```bash
-# Processar todos os arquivos com modelo padrão
-python3 src/refine.py
-
-# Usar modelo específico
-python3 src/refine.py --model llama2:7b
-
-# Processar arquivo específico
-python3 src/refine.py --files minha_aula.txt
-
-# Processar múltiplos arquivos com modelo específico
-python3 src/refine.py --model gemma:7b --files aula1.txt aula2.txt
+# Execute o programa principal
+python3 refine.py
 ```
+
+Siga os menus interativos para escolher modelo, arquivos e opções.
 
 ## 📁 Estrutura do Projeto
 
@@ -60,7 +45,8 @@ txtRefine/
 ├── input/                    # Arquivos de transcrição originais
 ├── output/                   # Arquivos refinados (prefixo "refined_")
 ├── src/
-│   └── refine.py            # Script principal de refinamento
+│   └── refine.py            # Módulo de refinamento
+├── refine.py                 # Programa principal interativo
 ├── requirements.txt          # Dependências Python
 └── README.md                # Este arquivo
 ```
@@ -88,40 +74,12 @@ txtRefine/
 
 ## 🔧 Modelos Recomendados
 
-| Modelo | Tamanho | Qualidade | Velocidade | Recomendação |
-|--------|---------|-----------|------------|--------------|
-| `neural-chat:latest` | 4.1 GB | ⭐⭐⭐⭐⭐ | ⚡⚡ | **Melhor qualidade** para filosofia |
-| `openchat:latest` | 4.1 GB | ⭐⭐⭐⭐⭐ | ⚡⚡ | **Excelente** para conteúdo acadêmico |
-| `llama3.2:latest` | 2.0 GB | ⭐⭐⭐⭐ | ⚡⚡⚡ | **Equilibrado** - boa qualidade e velocidade |
-| `dolphin-phi:latest` | 1.6 GB | ⭐⭐⭐⭐ | ⚡⚡⚡ | **Rápido** com boa qualidade |
-| `gemma:2b` | 1.7 GB | ⭐⭐⭐ | ⚡⚡⚡⚡ | **Mais rápido** para tarefas básicas |
+O programa suporta todos os modelos Ollama disponíveis. Recomendamos:
 
-### 🆕 **Modelos Open Source de Alta Qualidade**
-
-O programa agora inclui suporte para modelos open source de última geração:
-
-- **Neural Chat**: Modelo de alta qualidade otimizado para chat e instruções
-- **OpenChat**: Excelente modelo open source com capacidades de raciocínio
-- **Llama 3.2**: Último modelo open source da Meta com forte performance
-- **Dolphin Phi**: Modelo Phi da Microsoft otimizado para seguir instruções
-
-### 🔍 **Comparação de Modelos**
-
-Use o script de comparação para testar diferentes modelos no mesmo arquivo:
-
-```bash
-# Comparar todos os modelos disponíveis
-python3 compare_models.py
-
-# Comparar usando arquivo específico
-python3 compare_models.py input/minha_aula.txt
-```
-
-O script fornece métricas detalhadas sobre:
-- **Preservação de conteúdo** (diferença de caracteres)
-- **Velocidade de processamento**
-- **Qualidade da saída**
-- **Recomendação balanceada**
+- **`llama3.2:latest`** (padrão) - Equilibrado entre qualidade e velocidade
+- **`neural-chat:latest`** - Melhor qualidade para filosofia
+- **`openchat:latest`** - Excelente para conteúdo acadêmico
+- **`dolphin-phi:latest`** - Rápido com boa qualidade
 
 ## 📊 Exemplo de Saída
 
