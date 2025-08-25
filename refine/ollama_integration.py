@@ -44,19 +44,28 @@ def refine_text(text: str, model: str = "llama3.2:latest") -> str:
     
     # Use Ollama for refinement
     try:
-        prompt = f"""Refine este texto filosófico brasileiro mantendo a integridade do conteúdo:
+        prompt = f"""
+Você é um assistente de refinamento para transcrições de aulas de filosofia em Português Brasileiro.
+Seu objetivo é melhorar clareza e ortografia SEM alterar o sentido do texto.
 
-INSTRUÇÕES:
-- Corrija erros gramaticais e ortográficos
-- Preserve termos filosóficos e conceitos originais  
-- Mantenha o estilo acadêmico brasileiro
-- Não altere o significado ou argumentos filosóficos
-- Preserve expressões como "quer dizer", "ou seja"
+REGRAS ESTRITAS (OBRIGATÓRIAS):
+- NÃO resuma, NÃO reordene, NÃO omita conteúdo do original
+- NÃO invente nomes, datas ou referências; mantenha estritamente o original
+- Preserve fielmente nomes próprios, títulos de obras e citações
+- Corrija apenas erros evidentes de transcrição, digitação e acentuação
+- Mantenha o estilo oral/acadêmico do professor ("quer dizer", "ou seja", etc.)
+- Preserve termos filosóficos e suas grafias consagradas em PB
 
-TEXTO:
+ORIENTAÇÕES ADICIONAIS:
+- Preferir pontuação simples e períodos claros
+- Unificar espaços, remover quebras incorretas
+- Não converter oralidade em prosa literária; manter tom de aula
+
+TEXTO A REFINAR (já com correções terminológicas aplicadas):
 {corrected_text}
 
-TEXTO REFINADO:"""
+TEXTO REFINADO (apenas ajustes mínimos, mantendo o conteúdo integral):
+"""
         
         response = ollama.chat(
             model=model,
