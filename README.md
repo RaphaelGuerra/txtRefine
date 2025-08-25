@@ -1,139 +1,109 @@
-# txtRefine - Refinamento Inteligente de Transcrições
+# txtRefine - BP Philosophical Text Refinement
 
-Programa interativo para refinar transcrições de aulas de filosofia e conteúdo acadêmico em Português Brasileiro. Mantém fidelidade absoluta ao original enquanto corrige erros de transcrição.
+Simple and focused tool for refining Brazilian Portuguese philosophical transcription files. Specializes in correcting common transcription errors while maintaining the original philosophical content and academic style.
 
-## ✨ Características
+## ✨ Core Features
 
-- **Fidelidade ao Original**: Mantém todas as ideias filosóficas e o estilo do professor
-- **Correção Inteligente**: Corrige erros gramaticais, palavras mal transcritas e frases quebradas
-- **Processamento em Chunks**: Divide textos longos em partes gerenciáveis para melhor qualidade
-- **Especialização Filosófica**: Prompt otimizado para conteúdo filosófico e escolástico
-- **Interface Amigável**: Barra de progresso e estatísticas detalhadas
-- **Fallback Seguro**: Em caso de erro, mantém o texto original
+- **BP Phonetic Corrections**: Automatic correction of Brazilian Portuguese phonetic variations (s/z, r/l, t/ch alternations)
+- **Philosophical Term Database**: 386+ corrections for philosophical terms in Portuguese
+- **Academic Expression Preservation**: Maintains Brazilian academic expressions ("quer dizer", "ou seja", etc.)
+- **Ollama Integration**: Uses local LLMs for intelligent refinement
+- **Simple Interface**: Clean command-line interface focused on the essentials
 
-## 🚀 Como Usar
+## 🚀 Quick Start
 
-### 1. Instalar Ollama
-Baixe e instale o Ollama de [https://ollama.com/download](https://ollama.com/download)
-
-### 2. Baixar o Modelo
-Execute no terminal para o modelo padrão:
+### 1. Install Ollama & Model
 ```bash
+# Install Ollama from https://ollama.com/download
+# Pull the default model
 ollama pull llama3.2:latest
 ```
 
-### 3. Instalar Dependências Python
+### 2. Install Dependencies
 ```bash
-pip3 install -r requirements.txt
+pip install ollama
 ```
 
-### 4. Colocar Arquivos de Transcrição
-Coloque seus arquivos `.txt` de transcrição na pasta `input/`
+### 3. Add Your Files
+Place your `.txt` transcription files in the `input/` folder.
 
-### 5. Executar o Refinamento
+### 4. Run the Refinement
 ```bash
-# Execute o programa principal
-python3 refine.py
+python txtrefine.py
 ```
 
-Siga os menus interativos para escolher modelo, arquivos e opções.
+Follow the interactive menus to choose your model and files.
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
 txtRefine/
-├── input/                    # Arquivos de transcrição originais
-├── output/                   # Arquivos refinados (prefixo "refined_")
-├── refine.py                 # Programa principal (tudo-em-um)
-├── requirements.txt          # Dependências Python
-└── README.md                # Este arquivo
+├── input/                    # Your .txt transcription files
+├── output/                   # Refined files (with "refined_" prefix)
+├── txtrefine.py             # Main program
+└── refine/                  # Core modules
+    ├── philosophy_terms_database.py  # BP corrections database
+    ├── model_manager.py      # Ollama integration
+    ├── text_processing.py    # Text utilities
+    ├── file_manager.py       # File operations
+    └── ui.py                 # Simple interface
 ```
 
-## 🎯 Casos de Uso
+## 🎯 What It Does
 
-### Transcrições de Aulas de Filosofia
-- **Escolástica Medieval**: Santo Tomás de Aquino, São Boaventura, Pedro Abelardo
-- **Filosofia Contemporânea**: Olavo de Carvalho, cursos e seminários
-- **Conteúdo Acadêmico**: Palestras, conferências, debates filosóficos
+### Corrections Applied
+- ✅ **Phonetic variations**: `cauza` → `causa`, `rialidade` → `realidade`
+- ✅ **Philosophical terms**: `hamartianeamente` → `hamartiano`, `ptechne` → `techne`
+- ✅ **Academic expressions**: Maintains "quer dizer", "ou seja", "do ponto de vista"
+- ✅ **Grammar and style**: Improves clarity while preserving original meaning
 
-### O que o Programa Corrige
-- ✅ Erros gramaticais do português
-- ✅ Palavras mal transcritas ou incompletas
-- ✅ Frases quebradas ou mal estruturadas
-- ✅ Termos filosóficos incorretos
-- ✅ Quebras de linha inadequadas
+### Content Preserved
+- ❌ **Philosophical arguments**: Original ideas and logical structure maintained
+- ❌ **Academic style**: Brazilian philosophical discourse preserved
+- ❌ **Cultural context**: Regional expressions and nuances kept intact
 
-### O que o Programa NÃO Altera
-- ❌ Conteúdo filosófico original
-- ❌ Estrutura da argumentação
-- ❌ Estilo e tom do professor
-- ❌ Exemplos e citações
-- ❌ Comprimento do texto
+## 🤖 Supported Philosophical Traditions
 
-## 🔧 Modelos Recomendados
+- **Greek Classical**: Socrates, Plato, Aristotle, pre-Socratics
+- **Patristic**: Augustine, Justin Martyr, Origen, Church Fathers
+- **Scholastic**: Thomas Aquinas, Duns Scotus, medieval tradition
+- **Brazilian Contemporary**: Olavo de Carvalho, phenomenology, existentialism
 
-O programa suporta todos os modelos Ollama disponíveis. Recomendamos:
+## 📊 Example
 
-- **`llama3.2:latest`** (padrão) - Equilibrado entre qualidade e velocidade
-- **`neural-chat:latest`** - Melhor qualidade para filosofia
-- **`openchat:latest`** - Excelente para conteúdo acadêmico
-- **`dolphin-phi:latest`** - Rápido com boa qualidade
-
-## 📊 Exemplo de Saída
-
-**Antes (transcrição original):**
+**Before (transcription with BP errors):**
 ```
-O pressuposto da existência da Colássica são dois. Primeiro, a existência dessas vastas compilações de textos que acabaram tomando o título de livros de sentenças, dos quais o mais famoso foi de um sujeito chamado Pedro Lombardo...
+O hamartianeamente ptechne factusr ofereciram uma filizofia metafizica ontolojia.
 ```
 
-**Depois (refinado):**
+**After (refined with BP corrections):**
 ```
-O pressuposto da existência da Escolástica são dois. Primeiro, a existência dessas vastas compilações de textos que acabaram tomando o título de livros de sentenças, dos quais o mais famoso foi de um sujeito chamado Pedro Lombardo...
+O hamartiano techne actus ofereceram uma filosofia metafísica ontologia.
 ```
 
-## 🚨 Solução de Problemas
+## �� Troubleshooting
 
-### Ollama não está rodando
+### Ollama Issues
 ```bash
-# Iniciar Ollama
+# Check if Ollama is running
+ollama list
+
+# Pull the model if needed
+ollama pull llama3.2:latest
+
+# Start Ollama service if needed
 ollama serve
-
-# Em outro terminal, verificar modelos disponíveis
-ollama list
 ```
 
-### Modelo não encontrado
-```bash
-# Baixar modelo específico
-ollama pull nome_do_modelo
+### File Issues
+- Ensure your `.txt` files are UTF-8 encoded
+- Place files in the `input/` folder
+- Output files will appear in `output/` with "refined_" prefix
 
-# Ver modelos disponíveis
-ollama list
-```
+## 📄 License
 
-### Erro de memória
-- Use modelos menores (2B em vez de 7B)
-- Feche outros programas que consumam RAM
-- Reinicie o Ollama
-
-## 🤝 Contribuições
-
-Este projeto está aberto a contribuições! Se você encontrar bugs ou tiver sugestões de melhorias, sinta-se à vontade para:
-
-1. Abrir uma issue no GitHub
-2. Fazer um fork e submeter um pull request
-3. Sugerir melhorias no prompt de refinamento
-
-## 📄 Licença
-
-Este projeto é de código aberto e está disponível sob a licença MIT.
-
-## 🙏 Agradecimentos
-
-- Ollama por fornecer a infraestrutura de modelos locais
-- Comunidade de filosofia brasileira por inspirar este projeto
-- Todos os contribuidores que ajudaram a melhorar o programa
+This project is open source and available under the MIT license.
 
 ---
 
-**Nota**: Este programa foi desenvolvido especificamente para transcrições de filosofia em português, mas pode ser adaptado para outros idiomas e tipos de conteúdo modificando o prompt de refinamento.
+🇧🇷 **Sistema brasileiro para filosofia brasileira!** ✨

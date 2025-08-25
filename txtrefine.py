@@ -17,45 +17,17 @@ from pathlib import Path
 # Add the current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(__file__))
 
-# Import from our modularized packages
+# Import from our optimized modules
 from refine import (
-    # Text processing
-    clean_text,
-    split_into_chunks,
-    merge_chunks,
-    calculate_word_count,
-    validate_text,
-
-    # Model management
-    check_ollama_installation,
-    list_available_models,
-    refine_chunk,
-    validate_model,
-
-    # File management
-    read_text_file,
-    write_text_file,
-    generate_output_filename,
-    ensure_directories,
-    get_file_info,
-
-    # UI functions
-    show_header,
-    show_models_menu,
-    show_files_menu,
-    show_options_menu,
-    show_file_stats,
-    show_processing_start,
-    show_file_processing,
-    show_processing_complete,
-    show_processing_error,
-    show_processing_summary,
-    show_success_message,
-    show_exit_message,
-    show_interrupted_message,
-    show_error_message,
-    confirm_action,
-    get_user_input
+    # Utility functions (merged text + file processing)
+    clean_text, split_into_chunks, merge_chunks, word_count, is_valid_text,
+    list_input_files, read_text_file, write_text_file, generate_output_filename, ensure_directories,
+    # Ollama integration (simplified)
+    check_ollama, get_available_models, refine_text, validate_model,
+    # Core BP functionality
+    BPPhilosophySystem,
+    # Minimal UI
+    show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, get_user_input
 )
 
 # Configuration constants
@@ -80,28 +52,18 @@ def process_file(input_path: str, output_path: str, model_name: str) -> bool:
             return False
 
         # Validate text content
-        if not validate_text(original_text):
+        if not is_valid_text(original_text):
             print("❌ Text too short or invalid")
             return False
 
-        print("📚 Processing as philosophical text")
+        print("📚 Processing as BP philosophical text")
 
         # Clean and prepare text
         cleaned_text = clean_text(original_text)
 
-        # Split into chunks
-        chunks = split_into_chunks(cleaned_text)
-        print(f"📝 Divided into {len(chunks)} chunks for processing")
-
-        # Process chunks
-        refined_chunks = []
-        for i, chunk in enumerate(chunks, 1):
-            print(f"   Processing chunk {i}/{len(chunks)}...")
-            refined_chunk = refine_chunk(chunk, model_name, i, len(chunks))
-            refined_chunks.append(refined_chunk)
-
-        # Combine refined chunks
-        refined_text = merge_chunks(refined_chunks)
+        # Use simplified refinement process
+        print("   Applying BP corrections and refinement...")
+        refined_text = refine_text(cleaned_text, model_name)
 
         # Ensure output directory exists
         output_dir = os.path.dirname(output_path)
@@ -115,14 +77,14 @@ def process_file(input_path: str, output_path: str, model_name: str) -> bool:
             return False
 
         # Statistics
-        original_words = calculate_word_count(original_text)
-        refined_words = calculate_word_count(refined_text)
+        original_words = word_count(original_text)
+        refined_words = word_count(refined_text)
 
         print("\n✅ Refinement completed!")
         print("📊 Statistics:")
-        print(f"   Original words: {original_words:,}")
-        print(f"   Refined words: {refined_words:,}")
-        print(f"   Difference: {refined_words - original_words:+,}")
+        print(f"   Original words: {original_words}")
+        print(f"   Refined words: {refined_words}")
+        print(f"   Difference: {refined_words - original_words:+}")
         print(f"📁 Saved to: {output_path}")
 
         return True
@@ -138,96 +100,96 @@ def interactive_mode():
         show_header()
 
         # Check if Ollama is available
-        if not check_ollama_installation():
+        if not check_ollama():
             show_error_message("Ollama not available")
             print("💡 Install with: pip install ollama")
             print("💡 Make sure Ollama service is running")
             return
 
         # Get available models
-        models = list_available_models()
+        models = get_available_models()
         if not models:
             show_error_message("No models found")
             print("💡 Install models with: ollama pull llama3.2:latest")
             return
 
         # Select model
-        print("🎯 Step 1: Choose model")
-        selected_model = show_models_menu(models)
+        print("🤖 Available Models:")
+        print("-" * 40)
+        for i, model in enumerate(models, 1):
+            marker = "⭐" if model == 'llama3.2:latest' else "  "
+            print(f"{marker} {i}. {model}")
+        print()
+        print("⭐ = Recommended for BP philosophy")
+        print()
+
+        choice = get_user_input("Choose model (number) or Enter for default [1]: ").strip()
+        if not choice:
+            selected_model = 'llama3.2:latest'
+        else:
+            try:
+                index = int(choice) - 1
+                if 0 <= index < len(models):
+                    selected_model = models[index]
+                else:
+                    selected_model = 'llama3.2:latest'
+            except ValueError:
+                selected_model = 'llama3.2:latest'
+
         print(f"✅ Selected model: {selected_model}\n")
 
         # Select files
         print("🎯 Step 2: Choose files")
-        from refine import list_input_files
         available_files = list_input_files()
-        selected_files = show_files_menu(available_files)
 
-        if not selected_files:
-            show_error_message("No files selected")
-            input("Press Enter to exit...")
+        if not available_files:
+            print("❌ No .txt files found in input/")
             return
 
-        print(f"✅ Selected file(s): {', '.join(selected_files)}\n")
+        for i, file in enumerate(available_files, 1):
+            print(f"  {i}. {file}")
 
-        # Select processing option
-        print("🎯 Step 3: Choose action")
-        option = show_options_menu()
+        print()
+        choice = get_user_input("Choose file (number): ").strip()
 
-        if option == 1:
-            # Process files
-            show_processing_start(selected_model, selected_files)
+        try:
+            index = int(choice) - 1
+            if 0 <= index < len(available_files):
+                selected_files = [available_files[index]]
+            else:
+                show_error_message("Invalid choice")
+                return
+        except ValueError:
+            show_error_message("Invalid choice")
+            return
 
-            # Ensure output directory exists
-            ensure_directories("output")
+        print(f"✅ Selected file: {selected_files[0]}\n")
 
-            successful = 0
-            failed = 0
+        # Process the file directly
+        print("🎯 Processing file...")
 
-            for i, file in enumerate(selected_files, 1):
-                show_file_processing(file, i, len(selected_files))
+        # Ensure output directory exists
+        ensure_directories("output")
 
-                input_path = os.path.join("input", file)
-                output_filename = generate_output_filename(file)
-                output_path = os.path.join("output", output_filename)
+        file = selected_files[0]
+        input_path = os.path.join("input", file)
+        output_filename = generate_output_filename(file)
+        output_path = os.path.join("output", output_filename)
 
-                try:
-                    if process_file(input_path, output_path, selected_model):
-                        show_processing_complete(file)
-                        successful += 1
-                    else:
-                        show_processing_error(file, "Processing failed")
-                        failed += 1
-
-                except Exception as e:
-                    show_processing_error(file, str(e))
-                    failed += 1
-
-            # Summary
-            show_processing_summary(successful, failed, len(selected_files))
-
-            if successful > 0:
-                output_files = [generate_output_filename(f) for f in selected_files if f not in [f for i, f in enumerate(selected_files) if i < successful]]
-                show_success_message(output_files)
-
-        elif option == 2:
-            print("🔍 Model Comparison - Feature coming soon")
-            input("Press Enter to continue...")
-
-        elif option == 3:
-            show_file_stats(selected_files)
-            continue
-
-        elif option == 4:
-            print("⚙️ Advanced settings - Feature coming soon")
-            input("Press Enter to continue...")
-            continue
+        try:
+            if process_file(input_path, output_path, selected_model):
+                show_processing_complete(file)
+                show_success_message([file])
+            else:
+                show_error_message("Processing failed")
+        except Exception as e:
+            show_error_message(str(e))
 
         # Ask if user wants to process more files
         print("\n" + "=" * 60)
-        print("✨ Process more files? [y/n]: ", end="")
-        continue_choice = input().strip().lower()
+        choice = get_user_input("✨ Process another file? [y/N]: ").strip().lower()
 
-        if continue_choice not in ['s', 'sim', 'y', 'yes']:
+        if choice not in ['y', 'yes', 's', 'sim']:
             show_exit_message()
             break
 
@@ -249,11 +211,11 @@ def main():
         args = parser.parse_args()
 
         if args.list_models:
-            models = list_available_models()
+            models = get_available_models()
             if models:
                 print("Available models:")
                 for model in models:
-                    print(f"  - {model['name']} ({model['size']})")
+                    print(f"  - {model}")
             else:
                 print("No models found. Make sure Ollama is running.")
             return

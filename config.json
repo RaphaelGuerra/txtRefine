@@ -1,8 +1,0 @@
-{
-  "default_model": "llama3.2:latest",
-  "max_words_per_chunk": 800,
-  "parallel_processing": false,
-  "cache_refinements": true,
-  "progress_bar": true,
-  "preserve_academic_terms": true
-}
