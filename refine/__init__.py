@@ -13,7 +13,11 @@ from .utils import (
 )
 
 # Ollama integration
-from .ollama_integration import check_ollama, get_available_models, refine_text, validate_model
+from .ollama_integration import (
+    check_ollama, get_available_models, refine_text, validate_model,
+    refine_text_with_paragraphs, refine_text_comprehensive, smart_chunk_text,
+    advanced_correction_review, apply_advanced_corrections
+)
 
 # Core BP functionality (optimized version)
 from .bp_philosophy_optimized import OptimizedBPPhilosophySystem as BPPhilosophySystem
@@ -28,6 +32,8 @@ __all__ = [
     'generate_output_filename', 'ensure_directories',
     # Ollama integration
     'check_ollama', 'get_available_models', 'refine_text', 'validate_model',
+    'refine_text_with_paragraphs', 'refine_text_comprehensive', 'smart_chunk_text',
+    'advanced_correction_review', 'apply_advanced_corrections',
     # Core BP functionality
     'BPPhilosophySystem',
     # Minimal UI
