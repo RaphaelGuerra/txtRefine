@@ -17,7 +17,7 @@ def get_available_models() -> list:
     """Get list of available models."""
     try:
         response = ollama.list()
-        return [model['name'] for model in response.get('models', [])]
+        return [model.model for model in response.models]
     except:
         return []
 
