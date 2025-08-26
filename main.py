@@ -13,18 +13,21 @@ Usage:
 import sys
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
+from typing import List, Dict
+import time
 
 # Add the current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(__file__))
 
 # Import from our optimized modules
 from refine import (
-    # Utility functions (merged text + file processing)
-    clean_text, split_into_chunks, merge_chunks, word_count, is_valid_text,
+    # Utility functions
+    clean_text, word_count, is_valid_text,
     list_input_files, read_text_file, write_text_file, generate_output_filename, ensure_directories,
-    # Ollama integration (simplified)
+    # Ollama integration
     check_ollama, get_available_models, refine_text, validate_model,
-    refine_text_with_paragraphs,
     # Core BP functionality
     BPPhilosophySystem,
     # Minimal UI
@@ -36,17 +39,33 @@ DEFAULT_MODEL = "llama3.2:latest"
 DEFAULT_ENCODING = "utf-8"
 
 
-def process_file(input_path: str, output_path: str, model_name: str, use_paragraphs: bool = True, chunk_size: int = 800) -> bool:
-    """Process a single file with the specified model and processing method."""
+def process_file(input_path: str, output_path: str, model_name: str, **kwargs) -> bool:
+    """Process a single file with the specified model using single-pass refinement."""
+    from refine.utils import get_performance_monitor, get_streaming_processor
+    monitor = get_performance_monitor()
+    streaming_processor = get_streaming_processor()
+
+    file_start_time = time.time()
+    used_streaming = False
+    used_cache = False
+
     try:
         # Validate input file
         if not os.path.exists(input_path):
             show_error_message(f"Input file not found: {input_path}")
+            monitor.record_error()
             return False
 
         # Read input file
         print(f"📖 Processing: {os.path.basename(input_path)}")
-        original_text = read_text_file(input_path, DEFAULT_ENCODING)
+
+        # Check if file should use streaming (unless disabled)
+        no_streaming = kwargs.get('no_streaming', False)
+        if not no_streaming and streaming_processor.should_use_streaming(input_path):
+            original_text = streaming_processor.process_large_file(input_path, model_name)
+            used_streaming = True
+        else:
+            original_text = read_text_file(input_path, DEFAULT_ENCODING)
 
         if not original_text or not original_text.strip():
             print("❌ Empty file")
@@ -62,15 +81,17 @@ def process_file(input_path: str, output_path: str, model_name: str, use_paragra
         # Clean and prepare text
         cleaned_text = clean_text(original_text)
 
-        # Choose processing method
-        if use_paragraphs:
-            print(f"   🧠 Using hybrid paragraph-aware processing ({chunk_size} words/chunk)")
-            from refine.ollama_integration import refine_text_with_paragraphs
-            refined_text = refine_text_with_paragraphs(cleaned_text, model_name, chunk_size)
-        else:
-            print("   📝 Using traditional word-based processing")
-            from refine.ollama_integration import refine_text
-            refined_text = refine_text(cleaned_text, model_name)
+        # Single-pass refinement
+        print("   📝 Using single-pass minimal-correction refinement")
+        from refine.ollama_integration import single_pass_refine as single_refine
+
+        # Check if we have cached LLM response
+        from refine.utils import get_global_cache
+        cache = get_global_cache()
+        if cache.get_llm_response(cleaned_text, model_name):
+            used_cache = True
+
+        refined_text = single_refine(cleaned_text, model_name)
 
         # Ensure output directory exists
         output_dir = os.path.dirname(output_path)
@@ -81,24 +102,104 @@ def process_file(input_path: str, output_path: str, model_name: str, use_paragra
         success = write_text_file(output_path, refined_text, DEFAULT_ENCODING)
         if not success:
             print(f"❌ Failed to save file: {output_path}")
+            monitor.record_error()
             return False
 
-        # Statistics
+        # Statistics and performance monitoring
         original_words = word_count(original_text)
         refined_words = word_count(refined_text)
+        file_size = len(original_text)
+        processing_time = time.time() - file_start_time
+
+        # Record performance metrics
+        monitor.record_file_processing(
+            file_size=file_size,
+            word_count=original_words,
+            processing_time=processing_time,
+            used_streaming=used_streaming,
+            used_cache=used_cache
+        )
 
         print("\n✅ Refinement completed!")
         print("📊 Statistics:")
         print(f"   Original words: {original_words}")
         print(f"   Refined words: {refined_words}")
         print(f"   Difference: {refined_words - original_words:+}")
+        print(f"   Processing time: {processing_time:.2f}s")
+        if used_streaming:
+            print("   Mode: Streaming")
+        if used_cache:
+            print("   Cache: Hit")
         print(f"📁 Saved to: {output_path}")
 
         return True
 
     except Exception as e:
         show_error_message(f"Processing error: {e}")
+        monitor.record_error()
         return False
+
+
+def process_files_concurrent(input_paths: List[str], output_paths: List[str], model_name: str, max_workers: int = None, no_streaming: bool = False) -> Dict[str, bool]:
+    """Process multiple files concurrently with ThreadPoolExecutor."""
+    if len(input_paths) != len(output_paths):
+        print("❌ Input and output path lists must have the same length")
+        return {}
+
+    if max_workers is None:
+        max_workers = min(len(input_paths), os.cpu_count() or 4)
+
+    print(f"🚀 Starting concurrent processing with {max_workers} workers")
+    print(f"📁 Processing {len(input_paths)} files...")
+
+    results = {}
+    start_time = time.time()
+
+    # Create partial function with fixed parameters
+    process_func = partial(process_file, model_name=model_name, no_streaming=no_streaming)
+
+    # Create input-output pairs
+    file_pairs = list(zip(input_paths, output_paths))
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        future_to_file = {
+            executor.submit(process_func, input_path, output_path): (input_path, output_path)
+            for input_path, output_path in file_pairs
+        }
+
+        # Process completed tasks with progress tracking
+        completed = 0
+        for future in as_completed(future_to_file):
+            input_path, output_path = future_to_file[future]
+            try:
+                success = future.result()
+                results[input_path] = success
+                completed += 1
+
+                filename = os.path.basename(input_path)
+                status = "✅" if success else "❌"
+                print(f"   {status} [{completed}/{len(input_paths)}] {filename}")
+
+            except Exception as exc:
+                print(f"   ❌ [{completed}/{len(input_paths)}] {os.path.basename(input_path)} - Error: {exc}")
+                results[input_path] = False
+                completed += 1
+
+    elapsed_time = time.time() - start_time
+    successful = sum(1 for result in results.values() if result)
+
+    print("\n🎉 Concurrent processing complete!")
+    print(f"⏱️  Total time: {elapsed_time:.2f}s")
+    print(f"📊 Success rate: {successful}/{len(input_paths)} files")
+
+    # Show performance summary if we processed multiple files
+    from refine.utils import get_performance_monitor
+    monitor = get_performance_monitor()
+    if len(input_paths) > 1:
+        monitor.print_summary()
+
+    return results
 
 
 def interactive_mode():
@@ -157,38 +258,71 @@ def interactive_mode():
             print(f"  {i}. {file}")
 
         print()
-        choice = get_user_input("Choose file (number): ").strip()
+        print("💡 You can select multiple files (e.g., '1,3,5' or '1-3')")
+        choice = get_user_input("Choose file(s): ").strip()
 
+        selected_files = []
         try:
-            index = int(choice) - 1
-            if 0 <= index < len(available_files):
-                selected_files = [available_files[index]]
+            if ',' in choice:
+                # Multiple files by comma
+                indices = [int(x.strip()) - 1 for x in choice.split(',')]
+                selected_files = [available_files[i] for i in indices if 0 <= i < len(available_files)]
+            elif '-' in choice:
+                # Range of files
+                start, end = [int(x.strip()) - 1 for x in choice.split('-')]
+                selected_files = [available_files[i] for i in range(start, end + 1) if 0 <= i < len(available_files)]
             else:
-                show_error_message("Invalid choice")
+                # Single file
+                index = int(choice) - 1
+                if 0 <= index < len(available_files):
+                    selected_files = [available_files[index]]
+
+            if not selected_files:
+                show_error_message("No valid files selected")
                 return
+
         except ValueError:
-            show_error_message("Invalid choice")
+            show_error_message("Invalid choice format")
             return
 
-        print(f"✅ Selected file: {selected_files[0]}\n")
+        if len(selected_files) == 1:
+            print(f"✅ Selected file: {selected_files[0]}\n")
+        else:
+            print(f"✅ Selected {len(selected_files)} files:")
+            for file in selected_files:
+                print(f"   📄 {file}")
+            print()
 
-        # Process the file directly
-        print("🎯 Processing file...")
+        # Process files (concurrent if multiple, sequential if single)
+        print("🎯 Processing files...")
 
         # Ensure output directory exists
         ensure_directories("output")
 
-        file = selected_files[0]
-        input_path = os.path.join("input", file)
-        output_filename = generate_output_filename(file)
-        output_path = os.path.join("output", output_filename)
+        # Prepare input and output paths
+        input_paths = [os.path.join("input", file) for file in selected_files]
+        output_paths = [os.path.join("output", generate_output_filename(file)) for file in selected_files]
 
         try:
-            if process_file(input_path, output_path, selected_model, use_paragraphs=True, chunk_size=800):
-                show_processing_complete(file)
-                show_success_message([file])
+            if len(selected_files) == 1:
+                # Single file - use original method
+                if process_file(input_paths[0], output_paths[0], selected_model):
+                    show_processing_complete(selected_files[0])
+                    show_success_message(selected_files)
+                else:
+                    show_error_message("Processing failed")
             else:
-                show_error_message("Processing failed")
+                # Multiple files - use concurrent processing
+                results = process_files_concurrent(input_paths, output_paths, selected_model, no_streaming=False)
+
+                successful_files = [file for file, success in zip(selected_files, results.values()) if success]
+                if successful_files:
+                    show_success_message(successful_files)
+
+                failed_count = len(selected_files) - len(successful_files)
+                if failed_count > 0:
+                    print(f"⚠️  {failed_count} file(s) failed to process")
+
         except Exception as e:
             show_error_message(str(e))
 
@@ -214,8 +348,12 @@ def main():
         parser.add_argument('--output', '-o', help='Output file path')
         parser.add_argument('--model', '-m', default=DEFAULT_MODEL, help='Model to use')
         parser.add_argument('--list-models', action='store_true', help='List available models')
-        parser.add_argument('--no-paragraphs', action='store_true', help='Use traditional word-based processing instead of paragraph-aware')
-        parser.add_argument('--chunk-size', type=int, default=800, help='Maximum words per chunk (default: 800, recommended: 600-1000)')
+        parser.add_argument('--process-all', action='store_true', help='Process all files in input directory concurrently')
+        parser.add_argument('--max-workers', type=int, default=None, help='Maximum number of concurrent workers (default: CPU count)')
+        parser.add_argument('--clear-cache', action='store_true', help='Clear all cached data')
+        parser.add_argument('--cache-stats', action='store_true', help='Show cache statistics')
+        parser.add_argument('--no-streaming', action='store_true', help='Disable streaming for large files')
+        # Removed chunking options for simplified single-pass processing
 
         args = parser.parse_args()
 
@@ -229,27 +367,58 @@ def main():
                 print("No models found. Make sure Ollama is running.")
             return
 
-        if args.input and args.output:
+        if args.clear_cache:
+            from refine.utils import get_global_cache
+            cache = get_global_cache()
+            cache.clear_cache()
+            print("✅ Cache cleared successfully")
+            return
+
+        if args.cache_stats:
+            from refine.utils import get_global_cache
+            cache = get_global_cache()
+            stats = cache.get_stats()
+            print("📊 Cache Statistics:")
+            print(f"   LLM responses cached: {stats['llm_cache_size']}")
+            print(f"   BP corrections cached: {stats['bp_cache_size']}")
+            print(f"   Total cache entries: {stats['total_cache_entries']}")
+            return
+
+        if args.process_all:
+            # Process all files in input directory concurrently
+            available_files = list_input_files()
+            if not available_files:
+                print("❌ No .txt files found in input/")
+                return
+
+            print(f"🚀 Processing all {len(available_files)} files concurrently")
+            print("📝 Using single-pass minimal-correction refinement")
+
+            # Prepare input and output paths
+            input_paths = [os.path.join("input", file) for file in available_files]
+            output_paths = [os.path.join("output", generate_output_filename(file)) for file in available_files]
+
+            # Ensure output directory exists
+            ensure_directories("output")
+
+            results = process_files_concurrent(input_paths, output_paths, args.model, args.max_workers, getattr(args, 'no_streaming', False))
+
+            successful = sum(1 for result in results.values() if result)
+            print(f"\n📊 Batch processing complete: {successful}/{len(available_files)} files successful")
+
+        elif args.input and args.output:
             if not os.path.exists(args.input):
                 print(f"❌ Input file not found: {args.input}")
                 return
 
-            # Determine processing method
-            use_paragraphs = not args.no_paragraphs
-            chunk_size = args.chunk_size
-
-            if use_paragraphs:
-                print(f"🧠 Using hybrid paragraph-aware processing (chunk size: {chunk_size} words)")
-            else:
-                print("📝 Using traditional word-based processing")
-
-            success = process_file(args.input, args.output, args.model, use_paragraphs, chunk_size)
+            print("📝 Using single-pass minimal-correction refinement")
+            success = process_file(args.input, args.output, args.model)
             if success:
                 print(f"\n✅ Successfully processed {args.input} → {args.output}")
             else:
                 print(f"\n❌ Failed to process {args.input}")
         else:
-            print("❌ Please specify both --input and --output files")
+            print("❌ Please specify both --input and --output files (or use --process-all)")
             parser.print_help()
     else:
         # Interactive mode

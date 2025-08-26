@@ -1,9 +1,13 @@
-"""Simple Ollama integration for BP philosophical text refinement."""
+"""Simple Ollama integration for BP philosophical text refinement.
+
+Single-pass refinement only. All smart chunking has been removed to
+avoid over-processing and preserve structure.
+"""
 
 import ollama
 from typing import List, Dict
 from .bp_philosophy_optimized import OptimizedBPPhilosophySystem as BPPhilosophySystem
-from .utils import smart_chunk_text, reconstruct_with_paragraphs, split_into_paragraphs
+from .utils import get_global_cache
 
 
 def check_ollama() -> bool:
@@ -24,17 +28,25 @@ def get_available_models() -> list:
         return []
 
 
-def refine_text(text: str, model: str = "llama3.2:latest") -> str:
+def single_pass_refine(text: str, model: str = "llama3.2:latest") -> str:
     """
     Refine philosophical text with BP corrections.
-    
+
     Args:
         text: Text to refine
         model: Ollama model to use
-    
+
     Returns:
         Refined text
     """
+    cache = get_global_cache()
+
+    # Check cache first for LLM response
+    cached_response = cache.get_llm_response(text, model)
+    if cached_response:
+        print("✅ Using cached LLM response")
+        return cached_response
+
     # Initialize BP system
     bp_system = BPPhilosophySystem()
 
@@ -47,55 +59,49 @@ def refine_text(text: str, model: str = "llama3.2:latest") -> str:
     # Use Ollama for refinement
     try:
         prompt = f"""
-CRITICAL INSTRUCTIONS: You must make ONLY minimal corrections to terms and spelling. DO NOT alter structure, reorganize, or add content.
+CRITICAL INSTRUCTIONS: Make ONLY minimal corrections to terms and spelling. DO NOT alter structure, order, or content.
 
-TASK: Correct only typos, spelling errors, and specific philosophical terms. Maintain EXACTLY the same structure and content.
+TASK: Correct only typos, spelling errors, and specific philosophical terms. Maintain EXACT structure and content.
 
 ABSOLUTE RULES:
-1. DO NOT change the order of words, sentences, or paragraphs
-2. DO NOT add or remove any ideas or information
-3. DO NOT create transitions or connections between ideas
-4. DO NOT alter the oral lecture tone
-5. DO NOT reorganize the content in any way
-6. ONLY correct obvious spelling errors and specific terms
+1) Do not change the order of words, sentences, or paragraphs
+2) Do not add or remove information
+3) Do not create transitions
+4) Preserve the oral lecture tone
+5) Only correct obvious spelling, punctuation, and terminology
 
-ALLOWED CORRECTIONS:
-- Fix obvious typos
-- Correct incorrect philosophical terms to standard forms
-- Fix punctuation when clearly wrong
-- Correct obvious grammatical errors
-
-DO NOT ALTER:
-- Sentence and paragraph structure
-- Order and sequence of ideas
-- Original oral tone and style
-- Speech repetitions or emphases
-- Any aspect of the original structure
-
-TEXT TO PROCESS (make only minimal corrections):
+TEXT (apply minimal corrections only):
 {corrected_text}
 
-OUTPUT: Text with only minimal spelling and terminology corrections, maintaining EXACTLY the same structure:
+OUTPUT: Same text with minimal spelling/terminology fixes only.
 """
-        
+
+        # Record LLM call for performance monitoring
+        from .utils import get_performance_monitor
+        monitor = get_performance_monitor()
+        monitor.record_llm_call()
+
         response = ollama.chat(
             model=model,
             messages=[
                 {'role': 'system', 'content': 'You are a spelling and terminology corrector. Your task is to make ONLY minimal corrections to spelling, punctuation, and specific terms. DO NOT alter the structure, content, or order of ideas in any way.'},
                 {'role': 'user', 'content': prompt}
             ],
-            options={'temperature': 0.1}  # Very low temperature for minimal changes
+            options={'temperature': 0.1}
         )
 
         refined_text = response['message']['content'].strip()
 
         # Safety check - don't lose content
-        if len(refined_text.split()) < len(corrected_text.split()) * 0.8:
+        if len(refined_text.split()) < len(corrected_text.split()) * 0.9:
             print("⚠️  Content loss detected, using corrected text")
-            return corrected_text
+            refined_text = corrected_text
+
+        # Cache the LLM response
+        cache.set_llm_response(text, model, refined_text)
 
         return refined_text
-        
+
     except Exception as e:
         print(f"⚠️  Model processing failed: {e}")
         return corrected_text
@@ -105,6 +111,8 @@ def validate_model(model_name: str) -> bool:
     """Check if model is available."""
     models = get_available_models()
     return model_name in models
+
+# Note: All smart chunking and paragraph-aware processing removed.
 
 
 def smart_chunk_text(text: str, model: str = "llama3.2:latest", max_words: int = 800) -> List[str]:
@@ -159,21 +167,19 @@ The output MUST be a JSON object containing a single key "paragraphs", which is 
                 return paragraphs
             else:
                 print("⚠️  Smart chunking failed - invalid JSON structure, falling back to paragraph splitting")
-                return _fallback_paragraph_split(text, max_words)
+                return [text]
         except json.JSONDecodeError as e:
             print(f"⚠️  Smart chunking JSON parsing failed: {e}, falling back to paragraph splitting")
-            return _fallback_paragraph_split(text, max_words)
+            return [text]
 
     except Exception as e:
         print(f"⚠️  Smart chunking failed: {e}, falling back to paragraph splitting")
-        return _fallback_paragraph_split(text, max_words)
+        return [text]
 
 
 def _fallback_paragraph_split(text: str, max_words: int = 800) -> List[str]:
-    """Fallback method to split text into paragraphs if smart chunking fails."""
-    # Use the smart chunking from utils.py which handles both paragraph splitting and word limits
-    from .utils import smart_chunk_text as utils_smart_chunk
-    return utils_smart_chunk(text, max_words=max_words)
+    """Deprecated: return full text as single chunk."""
+    return [text]
 
 
 
@@ -203,34 +209,8 @@ def refine_text_with_paragraphs(text: str, model: str = "llama3.2:latest", chunk
     Returns:
         Refined text with preserved paragraph structure
     """
-    # Initialize BP system for terminology corrections
-    bp_system = BPPhilosophySystem()
-
-    # Split into smart chunks that respect paragraph boundaries
-    chunks = smart_chunk_text(text, max_words=chunk_size)
-
-    if len(chunks) == 1 and len(chunks[0].split()) <= chunk_size:
-        # Single chunk - process directly
-        return _process_single_chunk(chunks[0], bp_system, model)
-
-    # Multiple chunks - process each and reassemble
-    refined_chunks = []
-    total_corrections = 0
-
-    for i, chunk in enumerate(chunks, 1):
-        print(f"   Processing chunk {i}/{len(chunks)} ({len(chunk.split())} words)...")
-        refined_chunk = _process_single_chunk(chunk, bp_system, model)
-
-        # Extract correction count from the chunk processing
-        # (We'll need to modify _process_single_chunk to return this info)
-
-        refined_chunks.append(refined_chunk)
-
-    # Reassemble with proper paragraph formatting
-    final_text = reconstruct_with_paragraphs(refined_chunks)
-
-    print(f"✅ Completed hybrid paragraph processing: {len(chunks)} chunks processed")
-    return final_text
+    # Single-pass path only
+    return single_pass_refine(text, model)
 
 
 def _process_single_chunk(chunk: str, bp_system: BPPhilosophySystem, model: str) -> str:
