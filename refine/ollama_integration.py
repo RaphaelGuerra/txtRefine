@@ -70,36 +70,42 @@ def refine_text(text: str, model: str = "llama3.2:latest") -> str:
     # Use Ollama for refinement
     try:
         prompt = f"""
-Você é um assistente de refinamento para transcrições de aulas de filosofia em Português Brasileiro.
-Seu objetivo é melhorar clareza, ortografia e estrutura acadêmica SEM alterar o sentido do texto.
+Você é um assistente de refinamento acadêmico para textos filosóficos em Português Brasileiro.
+Seu objetivo é transformar transcrições em textos acadêmicos claros e bem estruturados SEM alterar o conteúdo fundamental.
 
 REGRAS ESTRITAS (OBRIGATÓRIAS):
-- NÃO resuma, NÃO reordene, NÃO omita conteúdo do original
+- PRESERVE todo o conteúdo original - não omita ideias, exemplos ou argumentos
 - NÃO altere correções terminológicas já aplicadas (ex: "equivocadamente", "techne", "historicamente")
-- NÃO invente nomes, datas ou referências; mantenha estritamente o original
-- Preserve fielmente nomes próprios, títulos de obras e citações
-- Corrija apenas erros evidentes de transcrição, digitação e acentuação
-- Mantenha o estilo acadêmico brasileiro preservando expressões como "quer dizer", "ou seja"
-- Preserve termos filosóficos e suas grafias consagradas em PB
+- NÃO invente informações, nomes, datas ou referências
+- Preserve termos filosóficos e expressões acadêmicas brasileiras
+- Mantenha a essência do pensamento filosófico original
 
-ORIENTAÇÕES PARA ESTRUTURA ACADÊMICA:
-- Melhore a organização em parágrafos quando apropriado
-- Use transições mais elegantes entre ideias
-- Mantenha tom acadêmico sem converter completamente em prosa formal
-- Preserve o caráter oral da aula mas torne mais fluido
-- Melhore conexões lógicas entre frases
-- Adicione título apropriado se o texto não tiver um
+ORIENTAÇÕES PARA TRANSFORMAÇÃO ACADÊMICA:
+- REORGANIZE em parágrafos lógicos e coesos (4-6 parágrafos principais)
+- Use transições suaves entre ideias e parágrafos
+- Seja conciso mas completo - elimine repetições desnecessárias
+- Melhore a clareza e precisão da linguagem acadêmica
+- Mantenha tom acadêmico acessível, não excessivamente formal
+- Adicione uma conclusão resumindo os pontos principais
+- Adicione título apropriado se necessário
 
-IMPORTANTE: O texto já foi corrigido terminologicamente. NÃO altere termos como:
-- "equivocadamente" (não volte para "hamartianeamente")
-- "techne" (não volte para "ptechne")
-- "historicamente" (não altere)
-- "neotomismo" (mantenha como está)
+ESTRUTURA DESEJADA:
+1. Introdução ao período e obra de Tomás de Aquino
+2. Análise da síntese tomista e suas interpretações
+3. Impacto histórico e influência limitada
+4. Problemas da cultura sacra/mundana e função da Igreja
+5. Conclusão sobre a oportunidade perdida
 
-TEXTO A REFINAR (já estruturado academicamente):
+IMPORTANTE: O texto base já foi corrigido terminologicamente. NÃO altere:
+- "equivocadamente" (mantém esta correção)
+- "techne" (mantém esta correção)
+- "historicamente" (mantém)
+- "neotomismo" (mantém)
+
+TEXTO A TRANSFORMAR (já corrigido terminologicamente):
 {structured_text}
 
-TEXTO REFINADO (com melhor estrutura acadêmica, mantendo conteúdo integral):
+TEXTO ACADÊMICO FINAL (bem estruturado, claro e conciso, mantendo todo conteúdo):
 """
         
         response = ollama.chat(
@@ -107,14 +113,30 @@ TEXTO REFINADO (com melhor estrutura acadêmica, mantendo conteúdo integral):
             messages=[{'role': 'user', 'content': prompt}],
             options={'temperature': 0.3}
         )
-        
+
         refined_text = response['message']['content'].strip()
-        
+
+        # FORCE preservation of critical corrections after Ollama processing
+        final_force_corrections = {
+            'hamartianeamente': 'equivocadamente',
+            'ptechne': 'techne',
+            'capacidadi': 'capacidade',
+            'e spantoso': 'espantoso',
+            'neotomismo': 'neotomismo',
+            'historicamnete': 'historicamente',
+            'historicamente inute': 'historicamente ineficaz',
+            'maior ptechne': 'maior capacidade',
+            'cuja maior ptechne': 'cuja maior capacidade'
+        }
+
+        for wrong, correct in final_force_corrections.items():
+            refined_text = refined_text.replace(wrong, correct)
+
         # Safety check - don't lose content
         if len(refined_text.split()) < len(corrected_text.split()) * 0.8:
             print("⚠️  Content loss detected, using corrected text")
             return corrected_text
-        
+
         return refined_text
         
     except Exception as e:
