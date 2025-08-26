@@ -1,7 +1,7 @@
 """Simple Ollama integration for BP philosophical text refinement."""
 
 import ollama
-from .bp_philosophy import BPPhilosophySystem
+from .bp_philosophy_optimized import OptimizedBPPhilosophySystem as BPPhilosophySystem
 
 
 def check_ollama() -> bool:
@@ -35,54 +35,51 @@ def refine_text(text: str, model: str = "llama3.2:latest") -> str:
     """
     # Initialize BP system
     bp_system = BPPhilosophySystem()
-    
+
     # Apply BP term corrections first
     corrected_text, corrections = bp_system.find_and_correct_terms(text)
-    
+
     if corrections:
         print(f"✅ Applied {len(corrections)} BP corrections")
-    
-    # Apply minimal corrections to preserve original speech structure
-    corrected_text = bp_system.enhance_academic_structure(text)
 
     # Use Ollama for refinement
     try:
         prompt = f"""
-INSTRUÇÕES CRÍTICAS: Você deve fazer APENAS correções mínimas de termos e ortografia. NÃO altere a estrutura, não reorganize, não adicione conteúdo.
+CRITICAL INSTRUCTIONS: You must make ONLY minimal corrections to terms and spelling. DO NOT alter structure, reorganize, or add content.
 
-TAREFA: Corrija apenas erros de digitação, ortografia e termos filosóficos específicos. Mantenha EXATAMENTE a mesma estrutura e conteúdo.
+TASK: Correct only typos, spelling errors, and specific philosophical terms. Maintain EXACTLY the same structure and content.
 
-REGRAS ABSOLUTAS:
-1. NÃO mude a ordem das palavras, frases ou parágrafos
-2. NÃO adicione ou remova qualquer ideia ou informação
-3. NÃO crie transições ou conexões entre ideias
-4. NÃO altere o tom oral da aula
-5. NÃO reorganize o conteúdo de forma alguma
-6. APENAS corrija erros óbvios de ortografia e termos específicos
+ABSOLUTE RULES:
+1. DO NOT change the order of words, sentences, or paragraphs
+2. DO NOT add or remove any ideas or information
+3. DO NOT create transitions or connections between ideas
+4. DO NOT alter the oral lecture tone
+5. DO NOT reorganize the content in any way
+6. ONLY correct obvious spelling errors and specific terms
 
-CORREÇÕES PERMITIDAS:
-- Corrija erros de digitação óbvios
-- Corrija termos filosóficos incorretos para formas padrão
-- Corrija pontuação quando claramente errada
-- Corrija erros gramaticais evidentes
+ALLOWED CORRECTIONS:
+- Fix obvious typos
+- Correct incorrect philosophical terms to standard forms
+- Fix punctuation when clearly wrong
+- Correct obvious grammatical errors
 
-NÃO ALTERE:
-- Estrutura de frases e parágrafos
-- Ordem e sequência de ideias
-- Tom e estilo oral original
-- Repetições ou ênfases da fala
-- Qualquer aspecto da estrutura original
+DO NOT ALTER:
+- Sentence and paragraph structure
+- Order and sequence of ideas
+- Original oral tone and style
+- Speech repetitions or emphases
+- Any aspect of the original structure
 
-TEXTO A PROCESSAR (faça apenas correções mínimas):
+TEXT TO PROCESS (make only minimal corrections):
 {corrected_text}
 
-SAÍDA: Texto com apenas correções mínimas de ortografia e termos, mantendo EXATAMENTE a mesma estrutura:
+OUTPUT: Text with only minimal spelling and terminology corrections, maintaining EXACTLY the same structure:
 """
         
         response = ollama.chat(
             model=model,
             messages=[
-                {'role': 'system', 'content': 'Você é um corretor ortográfico e terminológico. Sua tarefa é fazer APENAS correções mínimas de ortografia, pontuação e termos específicos. NÃO altere a estrutura, conteúdo ou ordem das ideias de forma alguma.'},
+                {'role': 'system', 'content': 'You are a spelling and terminology corrector. Your task is to make ONLY minimal corrections to spelling, punctuation, and specific terms. DO NOT alter the structure, content, or order of ideas in any way.'},
                 {'role': 'user', 'content': prompt}
             ],
             options={'temperature': 0.1}  # Very low temperature for minimal changes
