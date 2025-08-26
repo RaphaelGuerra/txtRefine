@@ -42,95 +42,53 @@ def refine_text(text: str, model: str = "llama3.2:latest") -> str:
     if corrections:
         print(f"✅ Applied {len(corrections)} BP corrections")
     
-    # Use enhanced academic structure method first
-    structured_text = bp_system.enhance_academic_structure(corrected_text)
-
-    # Force critical corrections one more time to ensure they're preserved
-    final_corrections = {
-        'hamartianeamente': 'equivocadamente',
-        'ptechne': 'techne',
-        'capacidadi': 'capacidade',
-        'e spantoso': 'espantoso',
-        'neotomismo': 'neotomismo',
-        'síntese tomista': 'síntese tomista',
-        'quer dizer': 'Ou seja,',
-        'o pessoal enuncia': 'é frequentemente interpretada',
-        'o que a gente vê': 'olhando em retrospecto',
-        'como se nada tivesse sido feito': 'como se sua obra não tivesse tido impacto algum',
-        'assim mesmo': 'de fato',
-        'é muito espantoso': 'É notável',
-        'esse período de medieval': 'O período medieval tardio',
-        'mas uma culminação': 'mas representa um ponto crucial',
-        'buscava-se resolver': 'Nela, buscava-se resolver'
-    }
-
-    for wrong, correct in final_corrections.items():
-        structured_text = structured_text.replace(wrong, correct)
+    # Apply minimal corrections to preserve original speech structure
+    corrected_text = bp_system.enhance_academic_structure(text)
 
     # Use Ollama for refinement
     try:
         prompt = f"""
-Você é um assistente de refinamento acadêmico para textos filosóficos em Português Brasileiro.
-Seu objetivo é transformar transcrições em textos acadêmicos claros e bem estruturados SEM alterar o conteúdo fundamental.
+INSTRUÇÕES CRÍTICAS: Você deve fazer APENAS correções mínimas de termos e ortografia. NÃO altere a estrutura, não reorganize, não adicione conteúdo.
 
-REGRAS ESTRITAS (OBRIGATÓRIAS):
-- PRESERVE todo o conteúdo original - não omita ideias, exemplos ou argumentos
-- NÃO altere correções terminológicas já aplicadas (ex: "equivocadamente", "techne", "historicamente")
-- NÃO invente informações, nomes, datas ou referências
-- Preserve termos filosóficos e expressões acadêmicas brasileiras
-- Mantenha a essência do pensamento filosófico original
+TAREFA: Corrija apenas erros de digitação, ortografia e termos filosóficos específicos. Mantenha EXATAMENTE a mesma estrutura e conteúdo.
 
-ORIENTAÇÕES PARA TRANSFORMAÇÃO ACADÊMICA:
-- REORGANIZE em parágrafos lógicos e coesos (4-6 parágrafos principais)
-- Use transições suaves entre ideias e parágrafos
-- Seja conciso mas completo - elimine repetições desnecessárias
-- Melhore a clareza e precisão da linguagem acadêmica
-- Mantenha tom acadêmico acessível, não excessivamente formal
-- Adicione uma conclusão resumindo os pontos principais
-- Adicione título apropriado se necessário
+REGRAS ABSOLUTAS:
+1. NÃO mude a ordem das palavras, frases ou parágrafos
+2. NÃO adicione ou remova qualquer ideia ou informação
+3. NÃO crie transições ou conexões entre ideias
+4. NÃO altere o tom oral da aula
+5. NÃO reorganize o conteúdo de forma alguma
+6. APENAS corrija erros óbvios de ortografia e termos específicos
 
-ESTRUTURA DESEJADA:
-1. Introdução ao período e obra de Tomás de Aquino
-2. Análise da síntese tomista e suas interpretações
-3. Impacto histórico e influência limitada
-4. Problemas da cultura sacra/mundana e função da Igreja
-5. Conclusão sobre a oportunidade perdida
+CORREÇÕES PERMITIDAS:
+- Corrija erros de digitação óbvios
+- Corrija termos filosóficos incorretos para formas padrão
+- Corrija pontuação quando claramente errada
+- Corrija erros gramaticais evidentes
 
-IMPORTANTE: O texto base já foi corrigido terminologicamente. NÃO altere:
-- "equivocadamente" (mantém esta correção)
-- "techne" (mantém esta correção)
-- "historicamente" (mantém)
-- "neotomismo" (mantém)
+NÃO ALTERE:
+- Estrutura de frases e parágrafos
+- Ordem e sequência de ideias
+- Tom e estilo oral original
+- Repetições ou ênfases da fala
+- Qualquer aspecto da estrutura original
 
-TEXTO A TRANSFORMAR (já corrigido terminologicamente):
-{structured_text}
+TEXTO A PROCESSAR (faça apenas correções mínimas):
+{corrected_text}
 
-TEXTO ACADÊMICO FINAL (bem estruturado, claro e conciso, mantendo todo conteúdo):
+SAÍDA: Texto com apenas correções mínimas de ortografia e termos, mantendo EXATAMENTE a mesma estrutura:
 """
         
         response = ollama.chat(
             model=model,
-            messages=[{'role': 'user', 'content': prompt}],
-            options={'temperature': 0.3}
+            messages=[
+                {'role': 'system', 'content': 'Você é um corretor ortográfico e terminológico. Sua tarefa é fazer APENAS correções mínimas de ortografia, pontuação e termos específicos. NÃO altere a estrutura, conteúdo ou ordem das ideias de forma alguma.'},
+                {'role': 'user', 'content': prompt}
+            ],
+            options={'temperature': 0.1}  # Very low temperature for minimal changes
         )
 
         refined_text = response['message']['content'].strip()
-
-        # FORCE preservation of critical corrections after Ollama processing
-        final_force_corrections = {
-            'hamartianeamente': 'equivocadamente',
-            'ptechne': 'techne',
-            'capacidadi': 'capacidade',
-            'e spantoso': 'espantoso',
-            'neotomismo': 'neotomismo',
-            'historicamnete': 'historicamente',
-            'historicamente inute': 'historicamente ineficaz',
-            'maior ptechne': 'maior capacidade',
-            'cuja maior ptechne': 'cuja maior capacidade'
-        }
-
-        for wrong, correct in final_force_corrections.items():
-            refined_text = refined_text.replace(wrong, correct)
 
         # Safety check - don't lose content
         if len(refined_text.split()) < len(corrected_text.split()) * 0.8:
