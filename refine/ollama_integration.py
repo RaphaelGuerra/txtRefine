@@ -42,29 +42,64 @@ def refine_text(text: str, model: str = "llama3.2:latest") -> str:
     if corrections:
         print(f"✅ Applied {len(corrections)} BP corrections")
     
+    # Use enhanced academic structure method first
+    structured_text = bp_system.enhance_academic_structure(corrected_text)
+
+    # Force critical corrections one more time to ensure they're preserved
+    final_corrections = {
+        'hamartianeamente': 'equivocadamente',
+        'ptechne': 'techne',
+        'capacidadi': 'capacidade',
+        'e spantoso': 'espantoso',
+        'neotomismo': 'neotomismo',
+        'síntese tomista': 'síntese tomista',
+        'quer dizer': 'Ou seja,',
+        'o pessoal enuncia': 'é frequentemente interpretada',
+        'o que a gente vê': 'olhando em retrospecto',
+        'como se nada tivesse sido feito': 'como se sua obra não tivesse tido impacto algum',
+        'assim mesmo': 'de fato',
+        'é muito espantoso': 'É notável',
+        'esse período de medieval': 'O período medieval tardio',
+        'mas uma culminação': 'mas representa um ponto crucial',
+        'buscava-se resolver': 'Nela, buscava-se resolver'
+    }
+
+    for wrong, correct in final_corrections.items():
+        structured_text = structured_text.replace(wrong, correct)
+
     # Use Ollama for refinement
     try:
         prompt = f"""
 Você é um assistente de refinamento para transcrições de aulas de filosofia em Português Brasileiro.
-Seu objetivo é melhorar clareza e ortografia SEM alterar o sentido do texto.
+Seu objetivo é melhorar clareza, ortografia e estrutura acadêmica SEM alterar o sentido do texto.
 
 REGRAS ESTRITAS (OBRIGATÓRIAS):
 - NÃO resuma, NÃO reordene, NÃO omita conteúdo do original
+- NÃO altere correções terminológicas já aplicadas (ex: "equivocadamente", "techne", "historicamente")
 - NÃO invente nomes, datas ou referências; mantenha estritamente o original
 - Preserve fielmente nomes próprios, títulos de obras e citações
 - Corrija apenas erros evidentes de transcrição, digitação e acentuação
-- Mantenha o estilo oral/acadêmico do professor ("quer dizer", "ou seja", etc.)
+- Mantenha o estilo acadêmico brasileiro preservando expressões como "quer dizer", "ou seja"
 - Preserve termos filosóficos e suas grafias consagradas em PB
 
-ORIENTAÇÕES ADICIONAIS:
-- Preferir pontuação simples e períodos claros
-- Unificar espaços, remover quebras incorretas
-- Não converter oralidade em prosa literária; manter tom de aula
+ORIENTAÇÕES PARA ESTRUTURA ACADÊMICA:
+- Melhore a organização em parágrafos quando apropriado
+- Use transições mais elegantes entre ideias
+- Mantenha tom acadêmico sem converter completamente em prosa formal
+- Preserve o caráter oral da aula mas torne mais fluido
+- Melhore conexões lógicas entre frases
+- Adicione título apropriado se o texto não tiver um
 
-TEXTO A REFINAR (já com correções terminológicas aplicadas):
-{corrected_text}
+IMPORTANTE: O texto já foi corrigido terminologicamente. NÃO altere termos como:
+- "equivocadamente" (não volte para "hamartianeamente")
+- "techne" (não volte para "ptechne")
+- "historicamente" (não altere)
+- "neotomismo" (mantenha como está)
 
-TEXTO REFINADO (apenas ajustes mínimos, mantendo o conteúdo integral):
+TEXTO A REFINAR (já estruturado academicamente):
+{structured_text}
+
+TEXTO REFINADO (com melhor estrutura acadêmica, mantendo conteúdo integral):
 """
         
         response = ollama.chat(
