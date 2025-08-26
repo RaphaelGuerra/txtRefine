@@ -24,7 +24,7 @@ from refine import (
     list_input_files, read_text_file, write_text_file, generate_output_filename, ensure_directories,
     # Ollama integration (simplified)
     check_ollama, get_available_models, refine_text, validate_model,
-    refine_text_with_paragraphs, refine_text_comprehensive,
+    refine_text_with_paragraphs,
     # Core BP functionality
     BPPhilosophySystem,
     # Minimal UI
@@ -36,7 +36,7 @@ DEFAULT_MODEL = "llama3.2:latest"
 DEFAULT_ENCODING = "utf-8"
 
 
-def process_file(input_path: str, output_path: str, model_name: str, use_paragraphs: bool = True, chunk_size: int = 800, comprehensive: bool = False, use_smart_chunking: bool = True) -> bool:
+def process_file(input_path: str, output_path: str, model_name: str, use_paragraphs: bool = True, chunk_size: int = 800) -> bool:
     """Process a single file with the specified model and processing method."""
     try:
         # Validate input file
@@ -63,14 +63,7 @@ def process_file(input_path: str, output_path: str, model_name: str, use_paragra
         cleaned_text = clean_text(original_text)
 
         # Choose processing method
-        if comprehensive:
-            print("   🎯 Using comprehensive three-step workflow:")
-            print("     📋 Step 1: Smart chunking")
-            print("     📚 Step 2: Dictionary corrections")
-            print("     🔍 Step 3: Advanced context-aware corrections")
-            from refine.ollama_integration import refine_text_comprehensive
-            refined_text = refine_text_comprehensive(cleaned_text, model_name, use_smart_chunking, chunk_size)
-        elif use_paragraphs:
+        if use_paragraphs:
             print(f"   🧠 Using hybrid paragraph-aware processing ({chunk_size} words/chunk)")
             from refine.ollama_integration import refine_text_with_paragraphs
             refined_text = refine_text_with_paragraphs(cleaned_text, model_name, chunk_size)
@@ -191,7 +184,7 @@ def interactive_mode():
         output_path = os.path.join("output", output_filename)
 
         try:
-            if process_file(input_path, output_path, selected_model, use_paragraphs=True):
+            if process_file(input_path, output_path, selected_model, use_paragraphs=True, chunk_size=800):
                 show_processing_complete(file)
                 show_success_message([file])
             else:
@@ -223,8 +216,6 @@ def main():
         parser.add_argument('--list-models', action='store_true', help='List available models')
         parser.add_argument('--no-paragraphs', action='store_true', help='Use traditional word-based processing instead of paragraph-aware')
         parser.add_argument('--chunk-size', type=int, default=800, help='Maximum words per chunk (default: 800, recommended: 600-1000)')
-        parser.add_argument('--comprehensive', action='store_true', help='Use three-step comprehensive workflow (smart chunking + dictionary + advanced corrections)')
-        parser.add_argument('--no-smart-chunking', action='store_true', help='Disable LLM-based smart chunking in comprehensive mode')
 
         args = parser.parse_args()
 
@@ -244,20 +235,15 @@ def main():
                 return
 
             # Determine processing method
-            comprehensive = args.comprehensive
-            use_paragraphs = not args.no_paragraphs and not comprehensive
-            use_smart_chunking = not args.no_smart_chunking
+            use_paragraphs = not args.no_paragraphs
             chunk_size = args.chunk_size
 
-            if comprehensive:
-                chunking_method = "LLM-based" if use_smart_chunking else "fallback paragraph"
-                print(f"🎯 Using comprehensive workflow (smart chunking: {chunking_method}, chunk size: {chunk_size} words)")
-            elif use_paragraphs:
+            if use_paragraphs:
                 print(f"🧠 Using hybrid paragraph-aware processing (chunk size: {chunk_size} words)")
             else:
                 print("📝 Using traditional word-based processing")
 
-            success = process_file(args.input, args.output, args.model, use_paragraphs, chunk_size, comprehensive, use_smart_chunking)
+            success = process_file(args.input, args.output, args.model, use_paragraphs, chunk_size)
             if success:
                 print(f"\n✅ Successfully processed {args.input} → {args.output}")
             else:

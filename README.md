@@ -37,19 +37,7 @@ Follow the interactive menus to choose your model and files.
 
 ### 5. Advanced Usage
 
-**Three-Step Comprehensive Workflow (Highest Quality - Recommended):**
-```bash
-# Complete workflow: smart chunking + dictionary + advanced corrections
-python main.py --input file.txt --output refined.txt --comprehensive
-
-# Comprehensive without LLM-based chunking (uses fallback paragraph splitting)
-python main.py --input file.txt --output refined.txt --comprehensive --no-smart-chunking
-
-# Comprehensive with custom chunk size
-python main.py --input file.txt --output refined.txt --comprehensive --chunk-size 600
-```
-
-**Hybrid Paragraph Processing (Good Quality):**
+**Hybrid Paragraph Processing (Recommended):**
 ```bash
 # Use default paragraph-aware processing
 python main.py --input input/file.txt --output output/refined.txt
@@ -57,7 +45,7 @@ python main.py --input input/file.txt --output output/refined.txt
 # Customize chunk size for optimal performance
 python main.py --input file.txt --output refined.txt --chunk-size 600
 
-# Traditional word-based processing (basic)
+# Traditional word-based processing
 python main.py --input file.txt --output refined.txt --no-paragraphs
 ```
 
@@ -113,25 +101,21 @@ Quer dizer que a síntese tomista que o pessoal enuncia erroneamente..."
 - **🤖 AI Understanding**: Better comprehension of complex philosophical reasoning
 - **📖 Human Readability**: Natural paragraph boundaries maintained
 
-## 🎯 Comprehensive Three-Step Workflow
+## 🎯 Smart Processing Workflow
 
-For the highest quality transcription refinement, use the new comprehensive workflow that addresses the limitations of dictionary-only approaches:
+For high-quality transcription refinement, the hybrid paragraph-aware processing intelligently segments text and applies 721+ BP corrections:
 
-### Step 1: Smart Chunking 🧠
+### Smart Chunking 🧠
 - **LLM-powered segmentation** based on topic shifts and rhetorical breaks
 - **Fallback option** using traditional paragraph splitting
 - **Preserves semantic coherence** by respecting natural content boundaries
 
-### Step 2: Dictionary Corrections 📚
+### Dictionary Corrections 📚
 - **721+ BP corrections** for common spelling errors
 - **Philosophical terminology** specific to Brazilian academic context
 - **Fast and accurate** for predictable patterns
 
-### Step 3: Advanced Context-Aware Corrections 🔍
-- **Transcription stutters**: "Tomás de Aquino de Aquino" → "Tomás de Aquino"
-- **Grammatical errors**: "período de medieval" → "período medieval"
-- **Contextual phrases**: "Dias César" → "Dai a César"
-- **Awkward phrasing**: Improved natural flow
+
 
 ### Quality Improvements
 - **🎯 Semantic Preservation**: Complete philosophical arguments processed together
@@ -141,10 +125,7 @@ For the highest quality transcription refinement, use the new comprehensive work
 
 ### Example Results
 ```bash
-# Before comprehensive processing
-"Tomás de Aquino de Aquino", "período de medieval", "Dias César"
-
-# After comprehensive processing
+# Example corrections applied
 "Tomás de Aquino", "período medieval", "Dai a César"
 ```
 
