@@ -617,7 +617,7 @@ class BPPhilosophySystem:
             'sofistica da': 'sofisticada',
             'intelectu al': 'intelectual',
             # Specific corrections for the reported text
-            'hamartianeamente': 'equivocadamente',  # corrected to proper philosophical term
+            'hamartianeamente': 'historicamente',  # corrected to proper philosophical term
             'ptechne': 'techne',
             # Additional specific corrections from user feedback
             'historicamnete': 'historicamente',
@@ -853,82 +853,33 @@ class BPPhilosophySystem:
 
     def enhance_academic_structure(self, text: str) -> str:
         """
-        Enhance the academic structure and formatting of philosophical text.
-        Creates a more academic, structured format while preserving all original content.
+        Apply MINIMAL corrections to preserve original speech structure and content.
+        Focus on terms, words, and mis-transcriptions only - NO restructuring.
         """
         enhanced_text = text
 
-        # Apply term corrections first with higher priority
+        # Apply term corrections first - these are the core focus
         enhanced_text, corrections = self.find_and_correct_terms(enhanced_text)
 
-        # Force specific critical corrections that user mentioned
+        # Apply only the most critical corrections that were specifically mentioned
         critical_corrections = {
-            'hamartianeamente': 'equivocadamente',
+            'hamartianeamente': 'historicamente',
             'ptechne': 'techne',
-            'historicamnete': 'historicamente',
-            'neotomismo': 'neotomismo',
-            'síntese tomista': 'síntese tomista',
             'capacidadi': 'capacidade',
-            'e spantoso': 'espantoso'
+            'e spantoso': 'espantoso',
+            'historicamnete': 'historicamente'
         }
 
         for wrong, correct in critical_corrections.items():
             enhanced_text = enhanced_text.replace(wrong, correct)
 
-        # Generate appropriate title based on content
-        if 'tomás' in enhanced_text.lower() or 'aquino' in enhanced_text.lower():
-            if 'oportunidade perdida' in enhanced_text.lower():
-                title = "A síntese de Tomás de Aquino: uma oportunidade perdida"
-            else:
-                title = "A síntese tomista e o problema da cultura sacra e profana"
-            enhanced_text = f"{title}\n\n{enhanced_text.lstrip()}"
+        # MINIMAL improvements - only fix obvious transcription errors
+        # Do NOT reorganize structure, add titles, or change the fundamental flow
 
-        # Major restructuring for academic clarity
-        enhanced_text = enhanced_text.replace('esse período de medieval', 'O período medieval')
-        enhanced_text = enhanced_text.replace('mas uma culminação', 'é um momento crucial')
-        enhanced_text = enhanced_text.replace('buscava-se resolver', 'buscou resolver')
-        enhanced_text = enhanced_text.replace('acabou se revelando historicamente inútil', 'suas soluções se mostraram historicamente ineficazes')
-        enhanced_text = enhanced_text.replace('quer dizer', 'Na verdade')
-        enhanced_text = enhanced_text.replace('o pessoal enuncia', 'é frequentemente')
-        enhanced_text = enhanced_text.replace('equivocadamente como um negócio', 'equivocadamente como uma conciliação')
-        enhanced_text = enhanced_text.replace('como se nada tivesse sido feito', 'como se a obra de Aquino não tivesse tido impacto algum')
-        enhanced_text = enhanced_text.replace('assim mesmo', 'de fato')
-        enhanced_text = enhanced_text.replace('é muito espantoso', 'É notável')
-        enhanced_text = enhanced_text.replace('se você pensar direito', 'de certa forma')
-        enhanced_text = enhanced_text.replace('cuja maior ptechne', 'cuja capacidade')
-        enhanced_text = enhanced_text.replace('quando estava dando', 'de seu pensamento era limitada')
-        enhanced_text = enhanced_text.replace('o que vemos na obra de São Tomás', 'Olhando em retrospecto')
-        enhanced_text = enhanced_text.replace('uma grande oportunidade perdida', 'uma oportunidade perdida para a época')
-
-        # Improve logical flow and conciseness
-        replacements = [
-            ('que o pessoal enuncia equivocadamente', 'que é frequentemente interpretada equivocadamente'),
-            ('como um negócio de fé e razão', 'como uma conciliação entre fé e razão'),
-            ('porque não é disso que se trata', 'pois essa não é sua essência'),
-            ('a influência ficou restrita', 'a influência de Aquino ficou restrita'),
-            ('pequenos grupos de intelectuais', 'pequenos círculos de intelectuais'),
-            ('maior techne', 'capacidade'),
-            ('não tinha muita capacidade', 'era limitada'),
-            ('que se equaciona a coisa', 'central da relação'),
-            ('não pode ser equacionado apenas', 'não pode ser resumida apenas'),
-            ('dentro da cultura profana existem elementos de fé', 'ambas as esferas possuem elementos de fé'),
-            ('esse problema era colocado', 'esse problema tinha raízes'),
-            ('muito real', 'práticas'),
-            ('própria função', 'função'),
-            ('assume temporariamente', 'assumiu temporariamente'),
-            ('se torna', 'tornou-se'),
-            ('único fator', 'único fator de estabilidade'),
-            ('não lhe ofereceram a ideia', 'não estava alinhada'),
-            ('se fazer isso', 'com suas funções tradicionais'),
-            ('também é preciso ver', 'Além disso'),
-            ('bocado difícil', 'difícil'),
-            ('fica um pouco nebuloso', 'torna ambígua'),
-            ('exatamente onde', 'a distinção entre'),
-            ('reino de Deus', 'reino de Deus')
-        ]
-
-        for old, new in replacements:
-            enhanced_text = enhanced_text.replace(old, new)
+        # Fix only the most obvious spacing and punctuation issues
+        enhanced_text = enhanced_text.replace(' ,', ',')
+        enhanced_text = enhanced_text.replace(' .', '.')
+        enhanced_text = enhanced_text.replace('  ', ' ')
 
         return enhanced_text
 
