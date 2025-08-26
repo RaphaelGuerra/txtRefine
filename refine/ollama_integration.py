@@ -107,7 +107,7 @@ def validate_model(model_name: str) -> bool:
     return model_name in models
 
 
-def smart_chunk_text(text: str, model: str = "llama3.2:latest") -> List[str]:
+def smart_chunk_text(text: str, model: str = "llama3.2:latest", max_words: int = 800) -> List[str]:
     """
     Use LLM to intelligently segment text into logical paragraphs.
 
@@ -119,6 +119,7 @@ def smart_chunk_text(text: str, model: str = "llama3.2:latest") -> List[str]:
     Args:
         text: Raw transcript text to segment
         model: Ollama model to use for analysis
+        max_words: Maximum words per chunk (for fallback segmentation)
 
     Returns:
         List of paragraph strings
@@ -158,22 +159,21 @@ The output MUST be a JSON object containing a single key "paragraphs", which is 
                 return paragraphs
             else:
                 print("⚠️  Smart chunking failed - invalid JSON structure, falling back to paragraph splitting")
-                return _fallback_paragraph_split(text)
+                return _fallback_paragraph_split(text, max_words)
         except json.JSONDecodeError as e:
             print(f"⚠️  Smart chunking JSON parsing failed: {e}, falling back to paragraph splitting")
-            return _fallback_paragraph_split(text)
+            return _fallback_paragraph_split(text, max_words)
 
     except Exception as e:
         print(f"⚠️  Smart chunking failed: {e}, falling back to paragraph splitting")
-        return _fallback_paragraph_split(text)
+        return _fallback_paragraph_split(text, max_words)
 
 
-def _fallback_paragraph_split(text: str) -> List[str]:
+def _fallback_paragraph_split(text: str, max_words: int = 800) -> List[str]:
     """Fallback method to split text into paragraphs if smart chunking fails."""
-    import re
-    # Use the existing paragraph splitting logic
-    from .utils import split_into_paragraphs
-    return split_into_paragraphs(text)
+    # Use the smart chunking from utils.py which handles both paragraph splitting and word limits
+    from .utils import smart_chunk_text as utils_smart_chunk
+    return utils_smart_chunk(text, max_words=max_words)
 
 
 def advanced_correction_review(text: str, model: str = "llama3.2:latest") -> List[Dict]:
@@ -335,10 +335,10 @@ def refine_text_comprehensive(text: str, model: str = "llama3.2:latest", use_sma
     print("\n📋 Step 1: Smart Chunking")
     if use_smart_chunking:
         print("   🧠 Using LLM-based intelligent segmentation...")
-        paragraphs = smart_chunk_text(text, model)
+        paragraphs = smart_chunk_text(text, model, chunk_size)
     else:
         print("   📝 Using fallback paragraph splitting...")
-        paragraphs = _fallback_paragraph_split(text)
+        paragraphs = _fallback_paragraph_split(text, chunk_size)
 
     print(f"   📊 Segmented into {len(paragraphs)} logical paragraphs")
 
