@@ -35,6 +35,13 @@ def show_exit_message():
     print("🇧🇷 Filosofia brasileira com excelência")
 
 
+def show_interrupted_message():
+    """Show message when user interrupts the program."""
+    print("\\n\\n⚠️  Operation interrupted by user (Ctrl+C)")
+    print("👋 Obrigado por usar txtRefine!")
+    print("🇧🇷 Até a próxima! (See you next time!)")
+
+
 def get_user_input(prompt: str) -> str:
     """Get user input."""
     return input(prompt).strip()

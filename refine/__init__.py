@@ -19,7 +19,7 @@ from .ollama_integration import check_ollama, get_available_models, refine_text,
 from .bp_philosophy_optimized import OptimizedBPPhilosophySystem as BPPhilosophySystem
 
 # Minimal UI
-from .ui import show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, get_user_input
+from .ui import show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, show_interrupted_message, get_user_input
 
 __all__ = [
     # Utility functions
@@ -32,5 +32,5 @@ __all__ = [
     'BPPhilosophySystem',
     # Minimal UI
     'show_header', 'show_error_message', 'show_processing_complete',
-    'show_success_message', 'show_exit_message', 'get_user_input'
+    'show_success_message', 'show_exit_message', 'show_interrupted_message', 'get_user_input'
 ]

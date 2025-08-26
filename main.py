@@ -27,7 +27,7 @@ from refine import (
     # Core BP functionality
     BPPhilosophySystem,
     # Minimal UI
-    show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, get_user_input
+    show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, show_interrupted_message, get_user_input
 )
 
 # Configuration constants
