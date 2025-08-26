@@ -6,8 +6,8 @@ A modularized tool for refining philosophy lecture transcriptions.
 Specialized for Brazilian Portuguese content with English UI.
 
 Usage:
-    python txtrefine.py              # Interactive mode
-    python txtrefine.py --input file.txt --output refined.txt  # Direct processing
+    python main.py              # Interactive mode
+    python main.py --input file.txt --output refined.txt  # Direct processing
 """
 
 import sys

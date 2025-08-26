@@ -30,7 +30,7 @@ Place your `.txt` transcription files in the `input/` folder.
 
 ### 4. Run the Refinement
 ```bash
-python txtrefine.py
+python main.py
 ```
 
 Follow the interactive menus to choose your model and files.
@@ -40,13 +40,13 @@ Follow the interactive menus to choose your model and files.
 **Hybrid Paragraph Processing (Recommended):**
 ```bash
 # Use default paragraph-aware processing (recommended)
-python txtrefine.py --input input/file.txt --output output/refined.txt
+python main.py --input input/file.txt --output output/refined.txt
 
 # Customize chunk size for optimal performance
-python txtrefine.py --input file.txt --output refined.txt --chunk-size 600
+python main.py --input file.txt --output refined.txt --chunk-size 600
 
 # Traditional word-based processing
-python txtrefine.py --input file.txt --output refined.txt --no-paragraphs
+python main.py --input file.txt --output refined.txt --no-paragraphs
 ```
 
 ## 📁 Project Structure
@@ -55,13 +55,13 @@ python txtrefine.py --input file.txt --output refined.txt --no-paragraphs
 txtRefine/
 ├── input/                    # Your .txt transcription files
 ├── output/                   # Refined files (with "refined_" prefix)
-├── txtrefine.py             # Main program
+├── main.py                   # Main program
 └── refine/                  # Core modules
-    ├── philosophy_terms_database.py  # BP corrections database
-    ├── model_manager.py      # Ollama integration
-    ├── text_processing.py    # Text utilities
-    ├── file_manager.py       # File operations
-    └── ui.py                 # Simple interface
+    ├── bp_philosophy_optimized.py    # BP corrections database
+    ├── ollama_integration.py         # Ollama integration
+    ├── utils.py                      # Text utilities
+    ├── ui.py                         # Simple interface
+    └── __init__.py                   # Package initialization
 ```
 
 ## 🧠 Hybrid Paragraph Processing
