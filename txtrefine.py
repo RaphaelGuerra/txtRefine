@@ -35,8 +35,8 @@ DEFAULT_MODEL = "llama3.2:latest"
 DEFAULT_ENCODING = "utf-8"
 
 
-def process_file(input_path: str, output_path: str, model_name: str) -> bool:
-    """Process a single file with the specified model."""
+def process_file(input_path: str, output_path: str, model_name: str, use_paragraphs: bool = True, chunk_size: int = 800) -> bool:
+    """Process a single file with the specified model and processing method."""
     try:
         # Validate input file
         if not os.path.exists(input_path):
@@ -61,9 +61,15 @@ def process_file(input_path: str, output_path: str, model_name: str) -> bool:
         # Clean and prepare text
         cleaned_text = clean_text(original_text)
 
-        # Use simplified refinement process
-        print("   Applying BP corrections and refinement...")
-        refined_text = refine_text(cleaned_text, model_name)
+        # Choose processing method
+        if use_paragraphs:
+            print(f"   🧠 Using hybrid paragraph-aware processing ({chunk_size} words/chunk)")
+            from refine.ollama_integration import refine_text_with_paragraphs
+            refined_text = refine_text_with_paragraphs(cleaned_text, model_name, chunk_size)
+        else:
+            print("   📝 Using traditional word-based processing")
+            from refine.ollama_integration import refine_text
+            refined_text = refine_text(cleaned_text, model_name)
 
         # Ensure output directory exists
         output_dir = os.path.dirname(output_path)
@@ -177,7 +183,7 @@ def interactive_mode():
         output_path = os.path.join("output", output_filename)
 
         try:
-            if process_file(input_path, output_path, selected_model):
+            if process_file(input_path, output_path, selected_model, use_paragraphs=True):
                 show_processing_complete(file)
                 show_success_message([file])
             else:
@@ -207,6 +213,8 @@ def main():
         parser.add_argument('--output', '-o', help='Output file path')
         parser.add_argument('--model', '-m', default=DEFAULT_MODEL, help='Model to use')
         parser.add_argument('--list-models', action='store_true', help='List available models')
+        parser.add_argument('--no-paragraphs', action='store_true', help='Use traditional word-based processing instead of paragraph-aware')
+        parser.add_argument('--chunk-size', type=int, default=800, help='Maximum words per chunk (default: 800, recommended: 600-1000)')
 
         args = parser.parse_args()
 
@@ -225,7 +233,16 @@ def main():
                 print(f"❌ Input file not found: {args.input}")
                 return
 
-            success = process_file(args.input, args.output, args.model)
+            # Determine processing method
+            use_paragraphs = not args.no_paragraphs
+            chunk_size = args.chunk_size
+
+            if use_paragraphs:
+                print(f"🧠 Using hybrid paragraph-aware processing (chunk size: {chunk_size} words)")
+            else:
+                print("📝 Using traditional word-based processing")
+
+            success = process_file(args.input, args.output, args.model, use_paragraphs, chunk_size)
             if success:
                 print(f"\n✅ Successfully processed {args.input} → {args.output}")
             else:

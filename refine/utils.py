@@ -18,6 +18,15 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
+def split_into_paragraphs(text: str) -> List[str]:
+    """Split text into paragraphs while preserving structure."""
+    import re
+    # Handle different paragraph markers: double newlines, triple newlines, etc.
+    paragraphs = re.split(r'\n\s*\n\s*|\n{3,}', text.strip())
+    # Filter out empty paragraphs and clean whitespace
+    return [p.strip() for p in paragraphs if p.strip()]
+
+
 def split_into_chunks(text: str, max_words: int = 1000) -> List[str]:
     """Split text into manageable chunks."""
     words = text.split()
@@ -31,9 +40,49 @@ def split_into_chunks(text: str, max_words: int = 1000) -> List[str]:
     return chunks
 
 
+def smart_chunk_text(text: str, max_words: int = 800) -> List[str]:
+    """
+    Hybrid approach: Split into paragraphs first, then combine intelligently.
+    This preserves semantic units while ensuring optimal chunk sizes.
+    """
+    paragraphs = split_into_paragraphs(text)
+
+    if not paragraphs:
+        return [text]
+
+    chunks = []
+    current_chunk = []
+    current_word_count = 0
+
+    for para in paragraphs:
+        para_words = len(para.split())
+
+        # If adding this paragraph would exceed limit AND we have content
+        if current_word_count + para_words > max_words and current_chunk:
+            # Save current chunk
+            chunks.append('\n\n'.join(current_chunk))
+            current_chunk = [para]
+            current_word_count = para_words
+        else:
+            # Add paragraph to current chunk
+            current_chunk.append(para)
+            current_word_count += para_words
+
+    # Don't forget the last chunk
+    if current_chunk:
+        chunks.append('\n\n'.join(current_chunk))
+
+    return chunks
+
+
 def merge_chunks(chunks: List[str]) -> str:
     """Merge chunks back into single text."""
     return ' '.join(chunks)
+
+
+def reconstruct_with_paragraphs(paragraphs: List[str]) -> str:
+    """Reassemble paragraphs with proper spacing for final output."""
+    return '\n\n'.join(paragraphs)
 
 
 def word_count(text: str) -> int:
