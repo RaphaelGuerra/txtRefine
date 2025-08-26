@@ -15,8 +15,8 @@ from .utils import (
 # Ollama integration
 from .ollama_integration import check_ollama, get_available_models, refine_text, validate_model
 
-# Core BP functionality
-from .bp_philosophy import BPPhilosophySystem
+# Core BP functionality (optimized version)
+from .bp_philosophy_optimized import OptimizedBPPhilosophySystem as BPPhilosophySystem
 
 # Minimal UI
 from .ui import show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, get_user_input
