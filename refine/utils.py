@@ -10,9 +10,35 @@ import time
 
 
 # Text processing functions
+def remove_timestamps(text: str) -> str:
+    """Remove timestamp patterns from text.
+
+    Handles various timestamp formats commonly found in transcriptions:
+    - M:SS format (e.g., "2:51", "15:30")
+    - MM:SS format (e.g., "02:51", "15:30")
+    - [Música] and other common markers
+    """
+    if not text:
+        return ""
+
+    # Remove timestamps in format M:SS or MM:SS at the beginning of lines
+    # This pattern matches digits:digits at start of line, optionally followed by space or common markers
+    text = re.sub(r'^(\d{1,2}:\d{2})\s*(\[.*?\])?\s*', '', text, flags=re.MULTILINE)
+
+    # Remove standalone timestamps that might be on their own lines
+    text = re.sub(r'^\s*(\d{1,2}:\d{2})\s*$', '', text, flags=re.MULTILINE)
+
+    # Clean up any double spaces or excessive whitespace that might result
+    text = re.sub(r' +', ' ', text)
+    text = re.sub(r'\n\s+', '\n', text)
+
+    return text.strip()
+
+
 def clean_text(text: str) -> str:
     """Clean text while preserving paragraph structure.
 
+    - Remove timestamps from transcriptions
     - Normalize line endings to \n
     - Repair hyphenated line-break splits (e.g., "pala-\n vra" -> "palavra")
     - Trim trailing spaces on each line
@@ -20,6 +46,9 @@ def clean_text(text: str) -> str:
     """
     if not text:
         return ""
+
+    # First, remove timestamps from transcriptions
+    text = remove_timestamps(text)
 
     # Normalize Windows/Mac line endings to \n
     text = text.replace('\r\n', '\n').replace('\r', '\n')
