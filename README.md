@@ -1,40 +1,32 @@
-# txtRefine: Philosophy Text Fixer 🤖📚
+# txtRefine — Philosophy Text Fixer
 
-Hey there! 👋 Want to know what this program does? It's like having a super-smart friend who helps clean up messy philosophy texts written in Portuguese. Think of it as a "spell checker" but specifically for philosophy terms and names!
+Small utility that cleans up Portuguese philosophy texts by normalizing names and terms (e.g., `Socrátes` → `Sócrates`, `aristoteles` → `Aristóteles`).
+
+This is a portfolio side project focused on text‑cleanup UX and fast, deterministic replacements. Not a production tool.
 
 ## What It Does
+- Detects and fixes common misspellings of philosopher names and key terms
+- Preserves the rest of the text exactly as written
+- Processes large files quickly
 
-Imagine you're reading a philosophy book in Portuguese, and some names are misspelled or written in weird ways. This program automatically finds and fixes those mistakes! For example:
+## How It Works
+- Uses curated maps and fuzzy matching tuned for PT‑BR philosophy texts
+- Produces a diff/preview of changes and a clean output file
+- Stateless by default; can optionally cache frequent fixes
 
-- `Socrátes` → `Sócrates`
-- `aristoteles` → `Aristóteles`
-- `platão` → `Platão`
-- `tomás de aquino` → `Tomás de Aquino`
+## Run Locally
+Prerequisites: Python 3.10+
 
-It knows hundreds of philosophy terms, from ancient Greek thinkers to modern Brazilian philosophers, and fixes them while keeping the rest of your text exactly the same.
+```bash
+python main.py
+```
 
-## Why It's Cool
+Follow the prompts to choose your input file and review changes before saving.
 
-✨ **Super Fast**: Can process long texts in seconds
-✨ **Smart**: Uses special algorithms to find patterns without getting confused
-✨ **Memory**: Remembers what it's fixed before, so it gets even faster over time
-✨ **Brazilian**: Specially designed for Portuguese philosophy texts
+## Status & Learnings
+- Functional prototype to explore text normalization and reviewable diffs
+- Next ideas: term packs by era/school, CLI flags, and VS Code integration
 
-## How It Works (Simple Version)
-
-1. You give it a messy text file with philosophy content
-2. It scans through looking for misspelled names and terms
-3. It fixes them automatically and shows you what changed
-4. You get a clean, corrected version to read or study from
-
-Think of it like autocorrect for your phone, but instead of fixing "teh" to "the", it fixes "socratez" to "Sócrates"!
-
-## Quick Start
-
-Want to try it? Just run the main program and follow the prompts. It's designed to be easy - no complicated setup needed!
-
----
-
-*Made with ❤️ for philosophy students and teachers who want to focus on ideas, not spelling mistakes!* 📖✨
-
+## License
+Personal portfolio project — not for production use.
 
