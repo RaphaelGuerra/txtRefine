@@ -28,5 +28,4 @@ Follow the prompts to choose your input file and review changes before saving.
 - Next ideas: term packs by era/school, CLI flags, and VS Code integration
 
 ## License
-Personal portfolio project — not for production use.
-
+All rights reserved. Personal portfolio project — not for production use.
