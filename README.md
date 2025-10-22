@@ -1,5 +1,17 @@
 # txtRefine — Philosophy Text Fixer
 
+Last updated: 2025-10-22
+
+## Table of Contents
+
+<!-- TOC start -->
+- [What It Does](#what-it-does)
+- [How It Works](#how-it-works)
+- [Run Locally](#run-locally)
+- [Status & Learnings](#status-learnings)
+- [License](#license)
+<!-- TOC end -->
+
 Small utility that cleans up Portuguese philosophy texts by normalizing names and terms (e.g., `Socrátes` → `Sócrates`, `aristoteles` → `Aristóteles`).
 
 This is a portfolio side project focused on text‑cleanup UX and fast, deterministic replacements. Not a production tool.
