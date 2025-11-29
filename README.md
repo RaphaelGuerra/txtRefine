@@ -1,6 +1,5 @@
 # txtRefine — Philosophy Text Fixer
 
-Last updated: 2025-11-29
 [![Lint](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/readme-lint.yml/badge.svg)](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/readme-lint.yml)
 [![Security](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/security.yml)
 
