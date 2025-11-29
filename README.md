@@ -42,6 +42,16 @@ python main.py
 
 Follow the prompts to choose your input file and review changes before saving.
 
+## Usage
+
+```bash
+# Interactive flow (prompts for input/output)
+python main.py
+
+# Direct refine with defaults (prints preview, asks to save)
+python main.py --input input/my-text.txt --output output/my-text-clean.txt
+```
+
 ## Status & Learnings
 
 - Functional prototype to explore text normalization and reviewable diffs
