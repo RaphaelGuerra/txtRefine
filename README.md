@@ -1,7 +1,6 @@
 # txtRefine — Philosophy Text Fixer
 
-[![Lint](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/readme-lint.yml/badge.svg)](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/readme-lint.yml)
-[![Security](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/security.yml)
+Last updated: 2025-11-30
 
 ## Table of Contents
 
@@ -9,9 +8,14 @@
 - [What It Does](#what-it-does)
 - [How It Works](#how-it-works)
 - [Run Locally](#run-locally)
+- [Usage](#usage)
 - [Status & Learnings](#status--learnings)
 - [License](#license)
 <!-- TOC end -->
+
+[![Lint](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/readme-lint.yml/badge.svg)](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/readme-lint.yml)
+[![Security](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/security.yml)
+
 
 Small utility that cleans up Portuguese philosophy texts by normalizing names and
 terms (e.g., `Socrátes` → `Sócrates`, `aristoteles` → `Aristóteles`).
