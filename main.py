@@ -12,10 +12,11 @@ Usage:
 
 import sys
 import os
+import json
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
-from typing import List, Dict
+from typing import List, Dict, Any, Optional
 import time
 
 # Add the current directory to Python path for imports
@@ -37,6 +38,72 @@ from refine import (
 # Configuration constants
 DEFAULT_MODEL = "llama3.2:latest"
 DEFAULT_ENCODING = "utf-8"
+
+
+def _parse_bool(value: Any) -> Optional[bool]:
+    """Parse loose boolean values from config/env."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "on"}:
+        return True
+    if text in {"0", "false", "no", "n", "off"}:
+        return False
+    return None
+
+
+def load_runtime_config() -> Dict[str, Any]:
+    """Load config from disk and environment variables."""
+    config: Dict[str, Any] = {}
+    env_config_path = os.getenv("TXTREFINE_CONFIG")
+    config_paths = []
+    if env_config_path:
+        config_paths.append(Path(env_config_path).expanduser())
+    config_paths.extend([
+        Path.cwd() / "txtrefine.json",
+        Path.home() / ".config" / "txtrefine" / "config.json",
+    ])
+
+    for path in config_paths:
+        if path.is_file():
+            try:
+                with path.open("r", encoding="utf-8") as handle:
+                    data = json.load(handle)
+                if isinstance(data, dict):
+                    config.update(data)
+                else:
+                    print(f"⚠️  Ignoring config file (expected JSON object): {path}")
+            except Exception as exc:
+                print(f"⚠️  Failed to load config {path}: {exc}")
+            break
+
+    env_model = os.getenv("TXTREFINE_MODEL")
+    if env_model:
+        config["model"] = env_model
+
+    env_no_streaming = os.getenv("TXTREFINE_NO_STREAMING")
+    parsed_no_streaming = _parse_bool(env_no_streaming)
+    if parsed_no_streaming is not None:
+        config["no_streaming"] = parsed_no_streaming
+
+    env_max_workers = os.getenv("TXTREFINE_MAX_WORKERS")
+    if env_max_workers:
+        try:
+            config["max_workers"] = int(env_max_workers)
+        except ValueError:
+            print("⚠️  TXTREFINE_MAX_WORKERS must be an integer.")
+
+    env_input = os.getenv("TXTREFINE_INPUT")
+    if env_input:
+        config["input"] = env_input
+
+    env_output = os.getenv("TXTREFINE_OUTPUT")
+    if env_output:
+        config["output"] = env_output
+
+    return config
 
 
 def process_file(input_path: str, output_path: str, model_name: str, **kwargs) -> bool:
@@ -346,18 +413,36 @@ def main():
         parser = argparse.ArgumentParser(description='txtRefine - Transcription Refinement')
         parser.add_argument('--input', '-i', help='Input file path')
         parser.add_argument('--output', '-o', help='Output file path')
-        parser.add_argument('--model', '-m', default=DEFAULT_MODEL, help='Model to use')
+        parser.add_argument('--model', '-m', default=None, help='Model to use')
         parser.add_argument('--list-models', action='store_true', help='List available models')
         parser.add_argument('--process-all', action='store_true', help='Process all files in input directory concurrently')
         parser.add_argument('--max-workers', type=int, default=None, help='Maximum number of concurrent workers (default: CPU count)')
         parser.add_argument('--clear-cache', action='store_true', help='Clear all cached data')
         parser.add_argument('--cache-stats', action='store_true', help='Show cache statistics')
-        parser.add_argument('--no-streaming', action='store_true', help='Disable streaming for large files')
+        parser.add_argument('--no-streaming', action='store_true', default=None, help='Disable streaming for large files')
         # Removed chunking options for simplified single-pass processing
 
         args = parser.parse_args()
+        runtime_config = load_runtime_config()
+
+        if args.model is None:
+            config_model = runtime_config.get("model")
+            args.model = config_model if isinstance(config_model, str) and config_model else DEFAULT_MODEL
+
+        if args.input is None:
+            args.input = runtime_config.get("input")
+        if args.output is None:
+            args.output = runtime_config.get("output")
+
+        if args.max_workers is None and runtime_config.get("max_workers") is not None:
+            args.max_workers = runtime_config.get("max_workers")
+
+        if args.no_streaming is None:
+            config_no_streaming = _parse_bool(runtime_config.get("no_streaming"))
+            args.no_streaming = config_no_streaming if config_no_streaming is not None else False
 
         if args.list_models:
+                return
             models = get_available_models()
             if models:
                 print("Available models:")
@@ -385,6 +470,7 @@ def main():
             return
 
         if args.process_all:
+                return
             # Process all files in input directory concurrently
             available_files = list_input_files()
             if not available_files:
@@ -401,18 +487,19 @@ def main():
             # Ensure output directory exists
             ensure_directories("output")
 
-            results = process_files_concurrent(input_paths, output_paths, args.model, args.max_workers, getattr(args, 'no_streaming', False))
+            results = process_files_concurrent(input_paths, output_paths, args.model, args.max_workers, args.no_streaming)
 
             successful = sum(1 for result in results.values() if result)
             print(f"\n📊 Batch processing complete: {successful}/{len(available_files)} files successful")
 
         elif args.input and args.output:
+                return
             if not os.path.exists(args.input):
                 print(f"❌ Input file not found: {args.input}")
                 return
 
             print("📝 Using single-pass minimal-correction refinement")
-            success = process_file(args.input, args.output, args.model)
+            success = process_file(args.input, args.output, args.model, no_streaming=args.no_streaming)
             if success:
                 print(f"\n✅ Successfully processed {args.input} → {args.output}")
             else:

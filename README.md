@@ -9,6 +9,7 @@ Last updated: 2026-01-14
 - [How It Works](#how-it-works)
 - [Run Locally](#run-locally)
 - [Usage](#usage)
+- [Configuration](#configuration)
 - [Status & Learnings](#status--learnings)
 - [License](#license)
 <!-- TOC end -->
@@ -52,6 +53,31 @@ python main.py
 
 # Direct refine with defaults (prints preview, asks to save)
 python main.py --input input/my-text.txt --output output/my-text-clean.txt
+```
+
+## Configuration
+
+Defaults can be provided via a JSON config file or environment variables.
+
+Config search order:
+1. `TXTREFINE_CONFIG` (explicit path)
+2. `./txtrefine.json`
+3. `~/.config/txtrefine/config.json`
+
+Supported keys (config or env):
+- `model` / `TXTREFINE_MODEL`
+- `no_streaming` / `TXTREFINE_NO_STREAMING`
+- `max_workers` / `TXTREFINE_MAX_WORKERS`
+- `input` / `TXTREFINE_INPUT`
+- `output` / `TXTREFINE_OUTPUT`
+
+Example `txtrefine.json`:
+```json
+{
+  "model": "llama3.2:latest",
+  "no_streaming": true,
+  "max_workers": 4
+}
 ```
 
 ## Status & Learnings
