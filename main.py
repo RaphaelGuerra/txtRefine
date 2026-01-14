@@ -106,6 +106,16 @@ def load_runtime_config() -> Dict[str, Any]:
     return config
 
 
+def ensure_ollama_available() -> bool:
+    """Exit early if Ollama is not reachable."""
+    if check_ollama():
+        return True
+    show_error_message("Ollama not available")
+    print("💡 Install with: pip install ollama")
+    print("💡 Make sure Ollama service is running")
+    return False
+
+
 def process_file(input_path: str, output_path: str, model_name: str, **kwargs) -> bool:
     """Process a single file with the specified model using single-pass refinement."""
     from refine.utils import get_performance_monitor, get_streaming_processor
@@ -442,6 +452,7 @@ def main():
             args.no_streaming = config_no_streaming if config_no_streaming is not None else False
 
         if args.list_models:
+            if not ensure_ollama_available():
                 return
             models = get_available_models()
             if models:
@@ -470,6 +481,7 @@ def main():
             return
 
         if args.process_all:
+            if not ensure_ollama_available():
                 return
             # Process all files in input directory concurrently
             available_files = list_input_files()
@@ -493,6 +505,7 @@ def main():
             print(f"\n📊 Batch processing complete: {successful}/{len(available_files)} files successful")
 
         elif args.input and args.output:
+            if not ensure_ollama_available():
                 return
             if not os.path.exists(args.input):
                 print(f"❌ Input file not found: {args.input}")
