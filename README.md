@@ -45,6 +45,12 @@ python main.py
 
 Follow the prompts to choose your input file and review changes before saving.
 
+Run tests:
+
+```bash
+python3 -m unittest tests/test_term_matching.py
+```
+
 ## Usage
 
 ```bash
