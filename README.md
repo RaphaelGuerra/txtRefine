@@ -66,11 +66,13 @@ python main.py --input input/my-text.txt --output output/my-text-clean.txt
 Defaults can be provided via a JSON config file or environment variables.
 
 Config search order:
+
 1. `TXTREFINE_CONFIG` (explicit path)
 2. `./txtrefine.json`
 3. `~/.config/txtrefine/config.json`
 
 Supported keys (config or env):
+
 - `model` / `TXTREFINE_MODEL`
 - `no_streaming` / `TXTREFINE_NO_STREAMING`
 - `max_workers` / `TXTREFINE_MAX_WORKERS`
@@ -78,6 +80,7 @@ Supported keys (config or env):
 - `output` / `TXTREFINE_OUTPUT`
 
 Example `txtrefine.json`:
+
 ```json
 {
   "model": "llama3.2:latest",
