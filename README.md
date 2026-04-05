@@ -1,6 +1,6 @@
-# txtRefine — Philosophy Text Fixer
+# txtRefine — PT-BR Transcript Refiner
 
-Last updated: 2026-03-23
+Last updated: 2026-04-05
 
 ## Table of Contents
 
@@ -10,30 +10,31 @@ Last updated: 2026-03-23
 - [Run Locally](#run-locally)
 - [Usage](#usage)
 - [Configuration](#configuration)
-- [Status & Learnings](#status--learnings)
+- [Testing](#testing)
+- [Status](#status)
 - [License](#license)
 <!-- TOC end -->
 
 [![Lint](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/readme-lint.yml/badge.svg)](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/readme-lint.yml)
 [![Security](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/security.yml/badge.svg)](https://github.com/RaphaelGuerra/txtRefine/actions/workflows/security.yml)
 
-Small utility that cleans up Portuguese philosophy texts by normalizing names and
-terms (e.g., `Socrátes` → `Sócrates`, `aristoteles` → `Aristóteles`).
-
-This is a portfolio side project focused on text‑cleanup UX and fast,
-deterministic replacements. Not a production tool.
+Small utility that turns rough transcript text into a cleaner, readable PT-BR transcript.
+It is designed for text exported from audio recordings such as voice memos, meetings,
+and interviews. v1 does not transcribe audio files directly.
 
 ## What It Does
 
-- Detects and fixes common misspellings of philosopher names and key terms
-- Preserves the rest of the text exactly as written
-- Processes large files quickly
+- Cleans timestamps, common noise markers, spacing issues, and obvious ASR mistakes
+- Fixes a small set of common PT-BR transcript and product-name errors
+- Preserves meaning, chronology, and spoken tone while improving readability
+- Works locally with deterministic cleanup plus optional Ollama polishing
 
 ## How It Works
 
-- Uses curated maps and fuzzy matching tuned for PT‑BR philosophy texts
-- Produces a diff/preview of changes and a clean output file
-- Stateless by default; can optionally cache frequent fixes
+- Applies conservative deterministic cleanup before the model runs
+- Uses Ollama to improve punctuation, capitalization, and paragraph breaks
+- Falls back to deterministic cleanup if the model is unavailable or over-shortens the text
+- Keeps the current CLI workflow focused on `.txt` transcript input and cleaned `.txt` output
 
 ## Run Locally
 
@@ -43,13 +44,7 @@ Prerequisites: Python 3.10+
 python main.py
 ```
 
-Follow the prompts to choose your input file and review changes before saving.
-
-Run tests:
-
-```bash
-python3 -m unittest tests/test_term_matching.py
-```
+Follow the prompts to choose a transcript file and review the cleaned output.
 
 ## Usage
 
@@ -57,8 +52,11 @@ python3 -m unittest tests/test_term_matching.py
 # Interactive flow (prompts for input/output)
 python main.py
 
-# Direct refine with defaults (prints preview, asks to save)
-python main.py --input input/my-text.txt --output output/my-text-clean.txt
+# Direct refine with defaults
+python main.py --input input/raw-transcript.txt --output output/refined-raw-transcript.txt
+
+# Process every transcript in input/
+python main.py --process-all
 ```
 
 ## Configuration
@@ -71,7 +69,7 @@ Config search order:
 2. `./txtrefine.json`
 3. `~/.config/txtrefine/config.json`
 
-Supported keys (config or env):
+Supported keys:
 
 - `model` / `TXTREFINE_MODEL`
 - `no_streaming` / `TXTREFINE_NO_STREAMING`
@@ -89,11 +87,18 @@ Example `txtrefine.json`:
 }
 ```
 
-## Status & Learnings
+## Testing
 
-- Functional prototype to explore text normalization and reviewable diffs
-- Next ideas: term packs by era/school, CLI flags, and VS Code integration
+```bash
+python3 -m unittest discover -s tests
+```
+
+## Status
+
+- Current focus: readable PT-BR transcript cleanup for voice-memo style text
+- Not in scope for this version: direct audio transcription, diarization, and summaries
+- Future ideas: style presets, domain-specific correction packs, and transcript review diffs
 
 ## License
 
-All rights reserved. Personal portfolio project — not for production use.
+All rights reserved. Personal portfolio project.

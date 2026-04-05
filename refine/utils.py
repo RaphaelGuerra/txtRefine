@@ -1,4 +1,4 @@
-"""Utility functions for BP philosophical text refinement."""
+"""Utility functions for PT-BR transcript refinement."""
 
 import os
 import re
@@ -9,6 +9,12 @@ from functools import lru_cache
 import time
 
 
+NOISE_MARKER_PATTERN = re.compile(
+    r"(\[|\()\s*(?:m[uú]sica|risos|aplausos|inaud[ií]vel|sil[eê]ncio|tosse|barulho|noise|laughter)\s*(?:\]|\))",
+    re.IGNORECASE,
+)
+
+
 # Text processing functions
 def remove_timestamps(text: str) -> str:
     """Remove timestamp patterns from text.
@@ -16,22 +22,43 @@ def remove_timestamps(text: str) -> str:
     Handles various timestamp formats commonly found in transcriptions:
     - M:SS format (e.g., "2:51", "15:30")
     - MM:SS format (e.g., "02:51", "15:30")
+    - HH:MM:SS format (e.g., "01:02:51")
+    - Bracketed timestamps (e.g., "[00:42]")
     - [Música] and other common markers
     """
     if not text:
         return ""
 
-    # Remove timestamps in format M:SS or MM:SS at the beginning of lines
-    # This pattern matches digits:digits at start of line, optionally followed by space or common markers
-    text = re.sub(r'^(\d{1,2}:\d{2})\s*(\[.*?\])?\s*', '', text, flags=re.MULTILINE)
+    # Remove timestamps at the beginning of lines.
+    text = re.sub(
+        r"^\s*(?:\[\s*)?(?:\d{1,2}:\d{2}(?::\d{2})?)(?:\s*\])?\s*(?:[-–]\s*)?",
+        "",
+        text,
+        flags=re.MULTILINE,
+    )
 
-    # Remove standalone timestamps that might be on their own lines
-    text = re.sub(r'^\s*(\d{1,2}:\d{2})\s*$', '', text, flags=re.MULTILINE)
+    # Remove standalone timestamps that might be on their own lines.
+    text = re.sub(
+        r"^\s*(?:\[\s*)?(?:\d{1,2}:\d{2}(?::\d{2})?)(?:\s*\])?\s*$",
+        "",
+        text,
+        flags=re.MULTILINE,
+    )
 
-    # Clean up any double spaces or excessive whitespace that might result
-    text = re.sub(r' +', ' ', text)
-    text = re.sub(r'\n\s+', '\n', text)
+    text = re.sub(r" +", " ", text)
+    text = re.sub(r"\n[ \t]+", "\n", text)
 
+    return text.strip()
+
+
+def remove_noise_markers(text: str) -> str:
+    """Remove common bracketed non-speech markers from transcripts."""
+    if not text:
+        return ""
+
+    text = NOISE_MARKER_PATTERN.sub(" ", text)
+    text = re.sub(r" {2,}", " ", text)
+    text = re.sub(r"\n[ \t]+", "\n", text)
     return text.strip()
 
 
@@ -39,32 +66,33 @@ def clean_text(text: str) -> str:
     """Clean text while preserving paragraph structure.
 
     - Remove timestamps from transcriptions
+    - Remove common bracketed non-speech markers
     - Normalize line endings to \n
     - Repair hyphenated line-break splits (e.g., "pala-\n vra" -> "palavra")
+    - Normalize whitespace and punctuation spacing
     - Trim trailing spaces on each line
     - Collapse runs of 3+ blank lines to exactly one blank line
     """
     if not text:
         return ""
 
-    # First, remove timestamps from transcriptions
     text = remove_timestamps(text)
+    text = remove_noise_markers(text)
 
-    # Normalize Windows/Mac line endings to \n
-    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
 
-    # Fix broken words at line breaks: word-\n word -> wordword
-    text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
+    text = re.sub(r"(\w+)-\s*\n\s*(\w+)", r"\1\2", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+    text = re.sub(r"([,.;:!?])([^\s\n,.;:!?])", r"\1 \2", text)
+    text = re.sub(r"([!?.,;:]){2,}", r"\1", text)
 
-    # Trim trailing spaces per line
-    lines = [re.sub(r'\s+$', '', line) for line in text.split('\n')]
-    text = '\n'.join(lines)
+    lines = [re.sub(r"\s+$", "", line).strip(" ") for line in text.split("\n")]
+    text = "\n".join(lines)
 
-    # Collapse 3+ consecutive blank lines to a single blank line
-    text = re.sub(r'(\n\s*){3,}', '\n\n', text)
+    text = re.sub(r"(\n\s*){3,}", "\n\n", text)
 
-    # Final trim while preserving first/last line boundaries
-    return text.strip('\n')
+    return text.strip("\n")
 
 
 def split_into_paragraphs(text: str) -> List[str]:
@@ -157,7 +185,7 @@ class TextProcessingCache:
     def __init__(self, max_size: int = 100):
         self.max_size = max_size
         self._llm_cache: Dict[str, Dict[str, Any]] = {}
-        self._bp_cache: Dict[str, Dict[str, Any]] = {}
+        self._transcript_cache: Dict[str, Dict[str, Any]] = {}
         self._access_times: Dict[str, float] = {}
 
     def _get_cache_key(self, text: str, operation: str, model: str = "") -> str:
@@ -195,37 +223,45 @@ class TextProcessingCache:
         }
         self._access_times[key] = time.time()
 
-    def get_bp_corrections(self, text: str) -> Optional[Dict[str, Any]]:
-        """Get cached BP corrections if available."""
-        key = self._get_cache_key(text, "bp")
-        if key in self._bp_cache:
+    def get_transcript_corrections(self, text: str) -> Optional[Dict[str, Any]]:
+        """Get cached deterministic transcript corrections if available."""
+        key = self._get_cache_key(text, "transcript")
+        if key in self._transcript_cache:
             self._access_times[key] = time.time()
-            return self._bp_cache[key]
+            return self._transcript_cache[key]
         return None
 
-    def set_bp_corrections(self, text: str, corrected_text: str, corrections: List[Dict]) -> None:
-        """Cache BP corrections."""
-        key = self._get_cache_key(text, "bp")
-        self._cleanup_cache(self._bp_cache)
-        self._bp_cache[key] = {
-            'corrected_text': corrected_text,
-            'corrections': corrections,
-            'timestamp': time.time()
+    def set_transcript_corrections(self, text: str, corrected_text: str, corrections: List[Dict]) -> None:
+        """Cache deterministic transcript corrections."""
+        key = self._get_cache_key(text, "transcript")
+        self._cleanup_cache(self._transcript_cache)
+        self._transcript_cache[key] = {
+            "corrected_text": corrected_text,
+            "corrections": corrections,
+            "timestamp": time.time(),
         }
         self._access_times[key] = time.time()
+
+    # Compatibility aliases for the older terminology.
+    def get_bp_corrections(self, text: str) -> Optional[Dict[str, Any]]:
+        return self.get_transcript_corrections(text)
+
+    def set_bp_corrections(self, text: str, corrected_text: str, corrections: List[Dict]) -> None:
+        self.set_transcript_corrections(text, corrected_text, corrections)
 
     def clear_cache(self) -> None:
         """Clear all cached data."""
         self._llm_cache.clear()
-        self._bp_cache.clear()
+        self._transcript_cache.clear()
         self._access_times.clear()
 
     def get_stats(self) -> Dict[str, int]:
         """Get cache statistics."""
         return {
-            'llm_cache_size': len(self._llm_cache),
-            'bp_cache_size': len(self._bp_cache),
-            'total_cache_entries': len(self._llm_cache) + len(self._bp_cache)
+            "llm_cache_size": len(self._llm_cache),
+            "transcript_cache_size": len(self._transcript_cache),
+            "bp_cache_size": len(self._transcript_cache),
+            "total_cache_entries": len(self._llm_cache) + len(self._transcript_cache),
         }
 
 
@@ -301,7 +337,7 @@ class StreamingTextProcessor:
             return read_text_file(file_path)
 
     def _process_chunk(self, chunk: str, model: str) -> str:
-        """Process a single chunk with BP corrections and LLM refinement."""
+        """Process a single chunk with deterministic cleanup and LLM refinement."""
         from .ollama_integration import single_pass_refine
 
         # Clean the chunk
@@ -345,7 +381,7 @@ class PerformanceMonitor:
             'streaming_files': 0,
             'regular_files': 0,
             'llm_calls': 0,
-            'bp_corrections_applied': 0,
+            'transcript_corrections_applied': 0,
             'errors_encountered': 0
         }
         self.start_time = time.time()
@@ -387,9 +423,13 @@ class PerformanceMonitor:
         """Record an LLM API call."""
         self.metrics['llm_calls'] += 1
 
+    def record_transcript_corrections(self, correction_count: int):
+        """Record deterministic transcript corrections applied."""
+        self.metrics['transcript_corrections_applied'] += correction_count
+
     def record_bp_corrections(self, correction_count: int):
-        """Record BP corrections applied."""
-        self.metrics['bp_corrections_applied'] += correction_count
+        """Compatibility alias for older callers."""
+        self.record_transcript_corrections(correction_count)
 
     def record_error(self):
         """Record an error."""
@@ -413,7 +453,7 @@ class PerformanceMonitor:
             'regular_files': self.metrics['regular_files'],
             'cache_hit_rate': round(cache_hit_rate, 1),
             'llm_calls': self.metrics['llm_calls'],
-            'bp_corrections_applied': self.metrics['bp_corrections_applied'],
+            'transcript_corrections_applied': self.metrics['transcript_corrections_applied'],
             'errors_encountered': self.metrics['errors_encountered']
         }
 
@@ -431,7 +471,7 @@ class PerformanceMonitor:
         print(f"Word processing: {summary['words_per_second']} words/sec")
         print(f"Cache hit rate: {summary['cache_hit_rate']}%")
         print(f"LLM calls: {summary['llm_calls']}")
-        print(f"BP corrections: {summary['bp_corrections_applied']}")
+        print(f"Transcript corrections: {summary['transcript_corrections_applied']}")
         if summary['streaming_files'] > 0:
             print(f"Streaming files: {summary['streaming_files']}")
         if summary['errors_encountered'] > 0:

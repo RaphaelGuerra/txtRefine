@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-txtRefine - Interactive Transcription Refinement
+txtRefine - Interactive Transcript Refinement
 
-A modularized tool for refining philosophy lecture transcriptions.
+A modularized tool for turning raw voice-memo transcripts into readable text.
 Specialized for Brazilian Portuguese content with English UI.
 
 Usage:
@@ -29,8 +29,6 @@ from refine import (
     list_input_files, read_text_file, write_text_file, generate_output_filename, ensure_directories,
     # Ollama integration
     check_ollama, get_available_models, refine_text, validate_model,
-    # Core BP functionality
-    BPPhilosophySystem,
     # Minimal UI
     show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, show_interrupted_message, get_user_input
 )
@@ -153,13 +151,13 @@ def process_file(input_path: str, output_path: str, model_name: str, **kwargs) -
             print("❌ Text too short or invalid")
             return False
 
-        print("📚 Processing as BP philosophical text")
+        print("📚 Processing as readable PT-BR transcript")
 
         # Clean and prepare text
         cleaned_text = clean_text(original_text)
 
         # Single-pass refinement
-        print("   📝 Using single-pass minimal-correction refinement")
+        print("   📝 Using single-pass readable transcript refinement")
         from refine.ollama_integration import single_pass_refine as single_refine
 
         # Check if we have cached LLM response
@@ -305,7 +303,7 @@ def interactive_mode():
             marker = "⭐" if model == 'llama3.2:latest' else "  "
             print(f"{marker} {i}. {model}")
         print()
-        print("⭐ = Recommended for BP philosophy")
+        print("⭐ = Recommended for PT-BR voice memos")
         print()
 
         choice = get_user_input("Choose model (number) or Enter for default [1]: ").strip()
@@ -476,7 +474,7 @@ def main():
             stats = cache.get_stats()
             print("📊 Cache Statistics:")
             print(f"   LLM responses cached: {stats['llm_cache_size']}")
-            print(f"   BP corrections cached: {stats['bp_cache_size']}")
+            print(f"   Transcript corrections cached: {stats['transcript_cache_size']}")
             print(f"   Total cache entries: {stats['total_cache_entries']}")
             return
 
@@ -490,7 +488,7 @@ def main():
                 return
 
             print(f"🚀 Processing all {len(available_files)} files concurrently")
-            print("📝 Using single-pass minimal-correction refinement")
+            print("📝 Using single-pass readable transcript refinement")
 
             # Prepare input and output paths
             input_paths = [os.path.join("input", file) for file in available_files]
@@ -511,7 +509,7 @@ def main():
                 print(f"❌ Input file not found: {args.input}")
                 return
 
-            print("📝 Using single-pass minimal-correction refinement")
+            print("📝 Using single-pass readable transcript refinement")
             success = process_file(args.input, args.output, args.model, no_streaming=args.no_streaming)
             if success:
                 print(f"\n✅ Successfully processed {args.input} → {args.output}")

@@ -1,9 +1,6 @@
-"""txtRefine - BP Philosophical Text Refinement
+"""txtRefine core package for PT-BR transcript refinement."""
 
-Core functionality for Brazilian Portuguese philosophical transcription refinement.
-"""
-
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 # Merged utility functions
 from .utils import (
@@ -17,8 +14,11 @@ from .ollama_integration import (
     check_ollama, get_available_models, single_pass_refine as refine_text, validate_model
 )
 
-# Core BP functionality (optimized version)
-from .bp_philosophy_optimized import OptimizedBPPhilosophySystem as BPPhilosophySystem
+# Core deterministic transcript cleanup
+from .transcript_refinement import TranscriptRefinementSystem
+
+# Backwards-compatible alias for older imports.
+BPPhilosophySystem = TranscriptRefinementSystem
 
 # Minimal UI
 from .ui import show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, show_interrupted_message, get_user_input
@@ -30,7 +30,8 @@ __all__ = [
     'generate_output_filename', 'ensure_directories',
     # Ollama integration
     'check_ollama', 'get_available_models', 'refine_text', 'validate_model',
-    # Core BP functionality
+    # Core transcript functionality
+    'TranscriptRefinementSystem',
     'BPPhilosophySystem',
     # Minimal UI
     'show_header', 'show_error_message', 'show_processing_complete',
