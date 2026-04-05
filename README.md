@@ -9,6 +9,7 @@ Last updated: 2026-04-05
 - [How It Works](#how-it-works)
 - [Run Locally](#run-locally)
 - [Usage](#usage)
+- [Quick Tips](#quick-tips)
 - [Configuration](#configuration)
 - [Testing](#testing)
 - [Status](#status)
@@ -63,6 +64,12 @@ python3 main.py
 # Process every transcript in input/
 ./txtrefine --process-all
 ```
+
+## Quick Tips
+
+- Put raw `.txt` transcripts in `input/` and read cleaned files from `output/`
+- If Ollama is unavailable, txtRefine still runs with deterministic cleanup only
+- For best results, use rough transcripts with timestamps, repeated fragments, or missing punctuation
 
 ## Configuration
 
