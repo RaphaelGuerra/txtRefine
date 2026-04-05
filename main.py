@@ -28,7 +28,7 @@ from refine import (
     clean_text, word_count, is_valid_text,
     list_input_files, read_text_file, write_text_file, generate_output_filename, ensure_directories,
     # Ollama integration
-    check_ollama, get_available_models, refine_text, validate_model,
+    get_available_models, get_ollama_status, DETERMINISTIC_ONLY_MODEL, refine_text, validate_model,
     # Minimal UI
     show_header, show_error_message, show_processing_complete, show_success_message, show_exit_message, show_interrupted_message, get_user_input
 )
@@ -104,14 +104,22 @@ def load_runtime_config() -> Dict[str, Any]:
     return config
 
 
-def ensure_ollama_available() -> bool:
-    """Exit early if Ollama is not reachable."""
-    if check_ollama():
-        return True
-    show_error_message("Ollama not available")
-    print("💡 Install with: pip install ollama")
-    print("💡 Make sure Ollama service is running")
-    return False
+def describe_ollama_status() -> Dict[str, Any]:
+    """Print a friendly status message and return Ollama availability details."""
+    status = get_ollama_status()
+    if status["server_reachable"]:
+        return status
+
+    if not status["python_package_installed"]:
+        print("⚠️  Ollama Python package not installed in this interpreter")
+        print("💡 Recommended: run `./txtrefine` to auto-bootstrap `.venv`")
+        print("💡 Manual setup: python3 -m venv .venv && source .venv/bin/activate && python3 -m pip install -r requirements.txt")
+    else:
+        print("⚠️  Ollama app/server not reachable from the project")
+        print("💡 If the Ollama app is open, wait a few seconds and try again")
+        print("💡 You can still continue in deterministic-only mode")
+
+    return status
 
 
 def process_file(input_path: str, output_path: str, model_name: str, **kwargs) -> bool:
@@ -282,44 +290,36 @@ def interactive_mode():
     while True:
         show_header()
 
-        # Check if Ollama is available
-        if not check_ollama():
-            show_error_message("Ollama not available")
-            print("💡 Install with: pip install ollama")
-            print("💡 Make sure Ollama service is running")
-            return
+        status = describe_ollama_status()
+        models = list(status["available_models"])
 
-        # Get available models
-        models = get_available_models()
-        if not models:
-            show_error_message("No models found")
-            print("💡 Install models with: ollama pull llama3.2:latest")
-            return
+        if models:
+            print("🤖 Available Models:")
+            print("-" * 40)
+            for i, model in enumerate(models, 1):
+                marker = "⭐" if model == DEFAULT_MODEL else "  "
+                print(f"{marker} {i}. {model}")
+            print()
+            print("⭐ = Recommended for PT-BR voice memos")
+            print()
 
-        # Select model
-        print("🤖 Available Models:")
-        print("-" * 40)
-        for i, model in enumerate(models, 1):
-            marker = "⭐" if model == 'llama3.2:latest' else "  "
-            print(f"{marker} {i}. {model}")
-        print()
-        print("⭐ = Recommended for PT-BR voice memos")
-        print()
+            choice = get_user_input("Choose model (number) or Enter for default [1]: ").strip()
+            if not choice:
+                selected_model = DEFAULT_MODEL
+            else:
+                try:
+                    index = int(choice) - 1
+                    if 0 <= index < len(models):
+                        selected_model = models[index]
+                    else:
+                        selected_model = DEFAULT_MODEL
+                except ValueError:
+                    selected_model = DEFAULT_MODEL
 
-        choice = get_user_input("Choose model (number) or Enter for default [1]: ").strip()
-        if not choice:
-            selected_model = 'llama3.2:latest'
+            print(f"✅ Selected model: {selected_model}\n")
         else:
-            try:
-                index = int(choice) - 1
-                if 0 <= index < len(models):
-                    selected_model = models[index]
-                else:
-                    selected_model = 'llama3.2:latest'
-            except ValueError:
-                selected_model = 'llama3.2:latest'
-
-        print(f"✅ Selected model: {selected_model}\n")
+            selected_model = DETERMINISTIC_ONLY_MODEL
+            print("🤖 Running in deterministic-only mode\n")
 
         # Select files
         print("🎯 Step 2: Choose files")
@@ -450,7 +450,8 @@ def main():
             args.no_streaming = config_no_streaming if config_no_streaming is not None else False
 
         if args.list_models:
-            if not ensure_ollama_available():
+            status = describe_ollama_status()
+            if not status["server_reachable"]:
                 return
             models = get_available_models()
             if models:
@@ -458,7 +459,7 @@ def main():
                 for model in models:
                     print(f"  - {model}")
             else:
-                print("No models found. Make sure Ollama is running.")
+                print("No models found. Install one with: ollama pull llama3.2:latest")
             return
 
         if args.clear_cache:
@@ -479,8 +480,8 @@ def main():
             return
 
         if args.process_all:
-            if not ensure_ollama_available():
-                return
+            status = describe_ollama_status()
+            selected_model = args.model if status["server_reachable"] else DETERMINISTIC_ONLY_MODEL
             # Process all files in input directory concurrently
             available_files = list_input_files()
             if not available_files:
@@ -497,20 +498,20 @@ def main():
             # Ensure output directory exists
             ensure_directories("output")
 
-            results = process_files_concurrent(input_paths, output_paths, args.model, args.max_workers, args.no_streaming)
+            results = process_files_concurrent(input_paths, output_paths, selected_model, args.max_workers, args.no_streaming)
 
             successful = sum(1 for result in results.values() if result)
             print(f"\n📊 Batch processing complete: {successful}/{len(available_files)} files successful")
 
         elif args.input and args.output:
-            if not ensure_ollama_available():
-                return
+            status = describe_ollama_status()
             if not os.path.exists(args.input):
                 print(f"❌ Input file not found: {args.input}")
                 return
 
             print("📝 Using single-pass readable transcript refinement")
-            success = process_file(args.input, args.output, args.model, no_streaming=args.no_streaming)
+            selected_model = args.model if status["server_reachable"] else DETERMINISTIC_ONLY_MODEL
+            success = process_file(args.input, args.output, selected_model, no_streaming=args.no_streaming)
             if success:
                 print(f"\n✅ Successfully processed {args.input} → {args.output}")
             else:

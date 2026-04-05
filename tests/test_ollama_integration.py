@@ -1,7 +1,12 @@
 import unittest
 from unittest.mock import patch
 
-from refine.ollama_integration import SYSTEM_PROMPT, build_refinement_prompt, single_pass_refine
+from refine.ollama_integration import (
+    DETERMINISTIC_ONLY_MODEL,
+    SYSTEM_PROMPT,
+    build_refinement_prompt,
+    single_pass_refine,
+)
 from refine.utils import get_global_cache
 
 
@@ -29,7 +34,7 @@ class TestOllamaIntegration(unittest.TestCase):
 
         refined = single_pass_refine("vamos abrir no microsof teams", model="llama3.2:latest")
 
-        self.assertEqual(refined, "vamos abrir no Microsoft Teams")
+        self.assertEqual(refined, "Vamos abrir no Microsoft Teams.")
 
     @patch("refine.ollama_integration.ollama")
     def test_content_loss_guard_keeps_deterministic_text(self, mock_ollama):
@@ -53,6 +58,15 @@ class TestOllamaIntegration(unittest.TestCase):
         prompt = build_refinement_prompt("texto")
         self.assertIn("Do not summarize", prompt)
         self.assertIn("cleaned transcript", prompt)
+        self.assertIn("sentence boundaries", prompt)
+        self.assertIn("wall of text", prompt)
+
+    def test_deterministic_only_mode_skips_ollama(self):
+        refined = single_pass_refine(
+            "vamos abrir no microsof teams",
+            model=DETERMINISTIC_ONLY_MODEL,
+        )
+        self.assertEqual(refined, "Vamos abrir no Microsoft Teams.")
 
 
 if __name__ == "__main__":

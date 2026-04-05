@@ -11,7 +11,8 @@ from .utils import (
 
 # Ollama integration
 from .ollama_integration import (
-    check_ollama, get_available_models, single_pass_refine as refine_text, validate_model
+    check_ollama, get_available_models, get_ollama_status,
+    DETERMINISTIC_ONLY_MODEL, single_pass_refine as refine_text, validate_model
 )
 
 # Core deterministic transcript cleanup
@@ -29,7 +30,8 @@ __all__ = [
     'list_input_files', 'list_output_files', 'read_text_file', 'write_text_file',
     'generate_output_filename', 'ensure_directories',
     # Ollama integration
-    'check_ollama', 'get_available_models', 'refine_text', 'validate_model',
+    'check_ollama', 'get_available_models', 'get_ollama_status',
+    'DETERMINISTIC_ONLY_MODEL', 'refine_text', 'validate_model',
     # Core transcript functionality
     'TranscriptRefinementSystem',
     'BPPhilosophySystem',

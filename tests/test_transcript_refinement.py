@@ -30,6 +30,26 @@ class TestTranscriptRefinementSystem(unittest.TestCase):
         self.assertEqual(corrected, raw)
         self.assertEqual(corrections, [])
 
+    def test_creates_sentences_from_run_on_text(self):
+        raw = (
+            "hoje eu gravei esse áudio para revisar o projeto com calma mas antes disso "
+            "eu queria alinhar os próximos passos depois a gente fecha os prazos"
+        )
+        corrected, _ = self.system.find_and_correct_terms(raw)
+        self.assertIn("Hoje eu gravei esse áudio para revisar o projeto com calma.", corrected)
+        self.assertIn("Mas antes disso eu queria alinhar os próximos passos.", corrected)
+        self.assertIn("Depois a gente fecha os prazos.", corrected)
+
+    def test_creates_paragraphs_from_long_transcript_block(self):
+        raw = (
+            "primeiro eu queria explicar o contexto da gravação e o que motivou essa revisão "
+            "mas antes disso vale lembrar que a versão anterior estava muito confusa "
+            "depois a gente organiza os próximos passos para a equipe "
+            "agora eu quero fechar com o que precisa entrar na próxima entrega"
+        )
+        corrected, _ = self.system.find_and_correct_terms(raw)
+        self.assertIn("\n\n", corrected)
+
 
 if __name__ == "__main__":
     unittest.main()

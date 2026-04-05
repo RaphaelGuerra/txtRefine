@@ -41,22 +41,27 @@ and interviews. v1 does not transcribe audio files directly.
 Prerequisites: Python 3.10+
 
 ```bash
-python main.py
+./txtrefine
 ```
 
+On the first run, `./txtrefine` creates `.venv/` and installs the Python dependency automatically.
+After that, the command stays available without manual activation.
 Follow the prompts to choose a transcript file and review the cleaned output.
 
 ## Usage
 
 ```bash
-# Interactive flow (prompts for input/output)
-python main.py
+# Recommended interactive flow
+./txtrefine
+
+# If you already activated your own venv, this also works
+python3 main.py
 
 # Direct refine with defaults
-python main.py --input input/raw-transcript.txt --output output/refined-raw-transcript.txt
+./txtrefine --input input/raw-transcript.txt --output output/refined-raw-transcript.txt
 
 # Process every transcript in input/
-python main.py --process-all
+./txtrefine --process-all
 ```
 
 ## Configuration

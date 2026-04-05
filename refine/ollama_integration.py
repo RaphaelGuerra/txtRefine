@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, List
+from typing import Dict, List
 
 try:
     import ollama
@@ -17,30 +17,41 @@ SYSTEM_PROMPT = (
     "You are a transcript editor for Brazilian Portuguese voice memos. "
     "Improve readability with punctuation, capitalization, paragraph breaks, "
     "and obvious ASR fixes, but preserve meaning, chronology, tone, and language. "
-    "Do not summarize, translate, invent content, or rewrite the transcript into essay prose."
+    "Do not summarize, translate, invent content, or rewrite the transcript into essay prose. "
+    "Prefer clear sentences and short readable paragraphs instead of one wall of text."
 )
+
+DETERMINISTIC_ONLY_MODEL = "deterministic-only"
+
+
+def get_ollama_status() -> Dict[str, object]:
+    """Report whether the Python package and local Ollama server are available."""
+    status: Dict[str, object] = {
+        "python_package_installed": ollama is not None,
+        "server_reachable": False,
+        "available_models": [],
+    }
+    if ollama is None:
+        return status
+
+    try:
+        response = ollama.list()
+        status["server_reachable"] = True
+        status["available_models"] = [model.model for model in response.models]
+    except Exception:
+        pass
+
+    return status
 
 
 def check_ollama() -> bool:
     """Check if Ollama is available."""
-    if ollama is None:
-        return False
-    try:
-        ollama.list()
-        return True
-    except Exception:
-        return False
+    return bool(get_ollama_status()["server_reachable"])
 
 
 def get_available_models() -> list:
     """Get list of available models."""
-    if ollama is None:
-        return []
-    try:
-        response = ollama.list()
-        return [model.model for model in response.models]
-    except Exception:
-        return []
+    return list(get_ollama_status()["available_models"])
 
 
 def build_refinement_prompt(text: str) -> str:
@@ -50,7 +61,7 @@ TASK: Rewrite this raw transcript as a readable transcript.
 
 GOALS:
 1) Fix obvious spelling and ASR mistakes
-2) Improve punctuation, capitalization, and paragraph breaks
+2) Improve punctuation, capitalization, sentence boundaries, and paragraph breaks
 3) Remove accidental duplicate fragments and repeated connector words
 4) Preserve the original meaning, chronology, and spoken tone
 
@@ -60,6 +71,7 @@ STRICT RULES:
 - Do not add speaker labels unless already present
 - Do not invent missing information
 - Do not turn it into polished article prose
+- Do not return a single long wall of text when natural sentence and paragraph breaks are inferable
 
 TEXT:
 {text}
@@ -83,7 +95,7 @@ def single_pass_refine(text: str, model: str = "llama3.2:latest") -> str:
     if corrections:
         print(f"✅ Applied {len(corrections)} transcript corrections")
 
-    if ollama is None:
+    if model == DETERMINISTIC_ONLY_MODEL or ollama is None:
         return corrected_text
 
     try:
@@ -114,6 +126,8 @@ def single_pass_refine(text: str, model: str = "llama3.2:latest") -> str:
 
 def validate_model(model_name: str) -> bool:
     """Check if model is available."""
+    if model_name == DETERMINISTIC_ONLY_MODEL:
+        return True
     return model_name in get_available_models()
 
 

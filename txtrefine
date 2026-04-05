@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$ROOT_DIR/.venv"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+if [ ! -x "$VENV_DIR/bin/python" ]; then
+  echo "Creating local virtual environment in .venv ..."
+  "$PYTHON_BIN" -m venv "$VENV_DIR"
+fi
+
+if ! "$VENV_DIR/bin/python" -c "import ollama" >/dev/null 2>&1; then
+  echo "Installing Python dependencies into .venv ..."
+  "$VENV_DIR/bin/python" -m pip install -r "$ROOT_DIR/requirements.txt"
+fi
+
+exec "$VENV_DIR/bin/python" "$ROOT_DIR/main.py" "$@"
